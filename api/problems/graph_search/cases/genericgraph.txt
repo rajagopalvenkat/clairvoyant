@@ -1,0 +1,15 @@
+GENERIC
+NODE first {"h": 2, "style": {"color": "green"}}
+NODE second
+NODE third
+NODE "dead end"
+NODE goal
+
+EDGE first second -b 
+EDGE second third -b
+EDGE first third -b {"w": 1.5}
+EDGE second "dead end"
+EDGE third goal
+
+START first
+GOAL goal
