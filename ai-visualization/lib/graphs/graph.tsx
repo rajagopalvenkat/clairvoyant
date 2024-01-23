@@ -1,55 +1,134 @@
 import { NotImplementedError, ParsingError } from "../errors/error";
 
 export abstract class Graph {
-    protected _nodeLookup: Record<string, GraphNode> = {}; // Used for data/existence access
-    protected _edgeLookup: Record<string, Record<string, GraphEdge>> = {} // Used to look up connections
-    protected isDirty: boolean = false;
+    protected _nodeLookup = new Map<string, GraphNode>(); // Used for data/existence access
+    protected _edgeLookup = new Map<string, Array<GraphEdge>>() // Used to look up connections to/from nodes
+    protected isDirtyLookup: boolean = false;
+    protected isDirtyRender: boolean = false;
     protected _startNode: GraphNode | null = null;
     protected _endNode: GraphNode | null = null;
     
-    markDirty() {
-        this.isDirty = true;
+    markDirtyLookup() {
+        this.isDirtyLookup = true;
     }
-    recalculate() {
-        this.isDirty = false;
-        // ...
+    markDirtyRender() {
+        this.isDirtyRender = true;
+    }
+    markDirtyAll() {
+        this.markDirtyLookup();
+        this.markDirtyRender();
+    }
+    ensureLookupClean() {
+        if (this.isDirtyLookup) {
+            this.isDirtyLookup = false;
+            const allEdges: Array<GraphEdge> = [];
+            for (let edges of Object.values(this._edgeLookup)) {
+                for (let edge of edges) {
+                    if (edge.isRef) continue;
+                    allEdges.push(edge);
+                } 
+            }
+            this._edgeLookup.clear()
+            for (let edge of allEdges) {
+                this.addEdge(edge);
+            }
+        }
+    }
+    ensureRenderClean() {
+        if (this.isDirtyRender) {
+            this.isDirtyRender = false;
+            // Recalculate render dependencies
+        }
+    }
+    ensureClean() {
+        this.ensureLookupClean();
+        this.ensureRenderClean();        
     }
 
-    // NODE OPERATIONS
-    addNode(node: GraphNode) {
-        this._nodeLookup[node.id] = node;
-        this.markDirty();
+    // Node Operations
+    protected addNode(node: GraphNode) {
+        this._nodeLookup.set(node.id, node);
+        this.markDirtyRender();
     }
-    removeNode(node: GraphNode): boolean;
-    removeNode(nodeId: string): boolean;
-    removeNode(val: GraphNode | string): boolean {
+    protected removeNode(node: GraphNode): boolean;
+    protected removeNode(nodeId: string): boolean;
+    protected removeNode(val: GraphNode | string): boolean {
         if (val instanceof GraphNode) {val = val.id;}
         if (!(val in this._nodeLookup)) return false;
-        this.clearAllEdges(val);
-        delete this._nodeLookup[val];
-        this.markDirty();
+        this.clearAllEdgesWith(val);
+        this._nodeLookup.delete(val);
+        this.markDirtyRender();
         return true;
     }
 
     // Edge operations
-    protected clearAllEdges(nodeId: string) {
-        this._edgeLookup
+    protected clearAllEdgesWith(nodeId: string) {
+        this.ensureLookupClean();
+        if (!(nodeId in this._edgeLookup)) return;
+        for (let edge of this._edgeLookup.get(nodeId)!) {
+            this._edgeLookup.set(edge.target.id, this._edgeLookup.get(edge.target.id)!.filter(e => {
+                e.target.id != nodeId;
+            }))
+        }
+        this._edgeLookup.delete(nodeId);
+        this.markDirtyRender();
     }
 
-    getNodeById(id: string): GraphNode | null {
-        if (!(id in this._nodeLookup)) return null;
-        return this._nodeLookup[id];
+    protected ensureEdgeLookupExists(id: string) {
+        if (!(id in this._edgeLookup)) {
+            this._edgeLookup.set(id, [])
+        }
+    }
+
+    protected addEdge(edgeData: GraphEdge) {
+        this.ensureEdgeLookupExists(edgeData.source.id);
+        this._edgeLookup.get(edgeData.source.id)!.push(edgeData);
+        this.ensureEdgeLookupExists(edgeData.target.id);
+        this._edgeLookup.get(edgeData.target.id)!.push(edgeData.reverse());
+        this.markDirtyRender();
+    }
+
+    protected removeEdge(edgeData: GraphEdge) {
+        this.ensureLookupClean();
+        const srcEdgeList = this._edgeLookup.get(edgeData.source.id)!
+        srcEdgeList.splice(srcEdgeList.indexOf(edgeData), 1);
+        const tarEdgeList = this._edgeLookup.get(edgeData.target.id)!
+        tarEdgeList.splice(tarEdgeList.indexOf(edgeData.reverse()), 1);
+        this.markDirtyRender();
+    }
+
+    // Useful functions for algorithms
+    /// Generates nodes which are adjacent to the given node
+    public *getAdjacentNodes(node: GraphNode): Generator<GraphNode> {
+        for (let [n, _] of this.getAdjacentData(node)) {
+            yield n;
+        }
+    }
+
+    /// Generates pairs node-weight, useful for edge-cost-sensitive solutions
+    public *getAdjacentData(node: GraphNode): Generator<[GraphNode, number]> {
+        this.ensureLookupClean();
+        if (!(node.id in this._edgeLookup)) return;
+        for (let edge of this._edgeLookup.get(node.id) || []) {
+            if (!edge.traversable()) continue;
+            yield [edge.target, edge.weight];
+        }
+    }
+
+    getNodeById(id: string): GraphNode | undefined {
+        if (!(id in this._nodeLookup)) return undefined;
+        return this._nodeLookup.get(id);
     }
 
     getNextIdentifier() {
         let potentialIdNum = Object.keys(this._nodeLookup).length;
         while (String(potentialIdNum) in this._nodeLookup) {potentialIdNum++;}
-        return String(potentialIdNum)
+        return String(potentialIdNum);
     }
 
     // Graph notation functions
     static parseGraph(text: string): Graph {
-        let lines = text.split(/\r?\n/);
+        const lines = text.split(/\r?\n/);
         if (lines.length == 0) throw new ParsingError("The graph expression must have at least 1 line indicating the graph type.", 0, 0);
         if (lines[0].startsWith("GENERIC")) {
             return GenericGraph.fromGraphNotation(lines);
@@ -112,33 +191,106 @@ export class GenericGraph extends Graph {
     }
 }
 
-export class GraphEdge {
-    private _source: GraphNode;
-    private _target: GraphNode;
-    private _isBidirectional: boolean;
-    style: GraphEdgeStyle = {};
+class ReverseGraphEdgeRef implements GraphEdge {
+    protected ref: GraphEdgeSimple;
+    constructor(reference: GraphEdgeSimple) {
+        this.ref = reference;
+    }
+    
+    get source() {return this.ref.target;}
+    set source(node: GraphNode) {this.ref.target = node;}
+    get target() {return this.ref.source;}
+    set target(node: GraphNode) {this.ref.source = node;}
+    get isBidirectional() {return this.ref.isBidirectional;}
+    set isBidirectional(bidirectional: boolean) {this.ref.isBidirectional = bidirectional;}
+    get data() {return this.ref.data}
+    set data(d) {this.ref.data = d}
+    get style() {return this.ref.style}
+    set style(s) {this.ref.style = s}
+    get weight() {return this.ref.weight}
+    set weight(w) {this.ref.weight = w}
+    get isRef() {return true;}
+    reverse() {
+        return this.ref;
+    }
+    traversable() {
+        return this.ref.isBidirectional;
+    }
+}
 
-    constructor(source: GraphNode, target: GraphNode, isBidirectional: boolean = false) {
+export class GraphEdgeSimple implements GraphEdge {
+    protected _source: GraphNode;
+    protected _target: GraphNode;
+    protected _isBidirectional: boolean;
+    protected _data: Record<string, Object>;
+    protected _style: GraphEdgeStyle;
+    private _reverse: ReverseGraphEdgeRef;
+
+    constructor(source: GraphNode, target: GraphNode, isBidirectional: boolean = false, data: Record<string, Object> = {}) {
         this._source = source;
         this._target = target;
         this._isBidirectional = isBidirectional;
+        this._data = data;
+        this._style = {};
+        this._reverse = new ReverseGraphEdgeRef(this);
     }
     
     get source() {return this._source;}
     set source(node: GraphNode) {
         this._source = node;
-        node.graph.markDirty();
+        node.graph.markDirtyAll();
     }
     get target() {return this._target;}
     set target(node: GraphNode) {
         this._target = node;
-        node.graph.markDirty();
+        node.graph.markDirtyAll();
     }
     get isBidirectional() {return this._isBidirectional;}
     set isBidirectional(bidirectional: boolean) {
         this.isBidirectional = bidirectional;
-        this._source.graph.markDirty();
+        this._source.graph.markDirtyRender();
     }
+
+    get data() {return this._data}
+    set data(d) {this._data = d}
+    get style() {return this._style}
+    set style(s) {this._style = s}
+
+    get weight() {
+        if ("w" in this._data) {return (this._data["w"] as number) || 1}
+        return 1;
+    }
+    set weight(w) {this._data["w"] = w}
+
+    get isRef() {return false;}
+
+    reverse(): GraphEdge {
+        return this._reverse; 
+    }
+
+    traversable(): boolean {
+        return true;
+    }
+}
+
+export interface GraphEdge {
+    get source(): GraphNode
+    set source(node: GraphNode)
+    get target(): GraphNode
+    set target(node: GraphNode)
+    get isBidirectional(): boolean
+    set isBidirectional(bidirectional: boolean)
+    get weight(): number
+    set weight(w: number)
+    get data(): Record<string, any>
+    set data(data: Record<string, any>)
+    get style(): GraphEdgeStyle
+    set style(style: GraphEdgeStyle)
+
+    get isRef(): boolean
+
+    reverse(): GraphEdge
+    traversable(): boolean
 }
 
 export class GraphNode {
