@@ -6,7 +6,7 @@ let Solution = class extends GraphSearchSolution {
     
     solve(start, goal) {
         this.visited[start.id] = true;
-        if (this.solve(start, goal, graph)) {
+        if (this.solve_internal(start, goal, graph)) {
             return success(); // Success is an external function in GraphSearchSolution that enables visualization
         }
         return failure(); // Failure is an external function in GraphSearchSolution that enables visualization
