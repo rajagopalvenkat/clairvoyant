@@ -1,8 +1,9 @@
 import { NotImplementedError, ParsingError } from "../errors/error";
+import { genericFromGraphNotation, gridGraphFromNotation } from "./parsing";
 
 export abstract class Graph {
     protected _nodeLookup = new Map<string, GraphNode>(); // Used for data/existence access
-    protected _edgeLookup = new Map<string, Array<GraphEdge>>() // Used to look up connections to/from nodes
+    protected _edgeLookup = new Map<string, GraphEdge[]>() // Used to look up connections to/from nodes
     protected isDirtyLookup: boolean = false;
     protected isDirtyRender: boolean = false;
     protected _startNode: GraphNode | null = null;
@@ -21,7 +22,7 @@ export abstract class Graph {
     ensureLookupClean() {
         if (this.isDirtyLookup) {
             this.isDirtyLookup = false;
-            const allEdges: Array<GraphEdge> = [];
+            const allEdges: GraphEdge[] = [];
             for (let edges of Object.values(this._edgeLookup)) {
                 for (let edge of edges) {
                     if (edge.isRef) continue;
@@ -46,13 +47,13 @@ export abstract class Graph {
     }
 
     // Node Operations
-    protected addNode(node: GraphNode) {
+    public addNode(node: GraphNode) {
         this._nodeLookup.set(node.id, node);
         this.markDirtyRender();
     }
-    protected removeNode(node: GraphNode): boolean;
-    protected removeNode(nodeId: string): boolean;
-    protected removeNode(val: GraphNode | string): boolean {
+    public removeNode(node: GraphNode): boolean;
+    public removeNode(nodeId: string): boolean;
+    public removeNode(val: GraphNode | string): boolean {
         if (val instanceof GraphNode) {val = val.id;}
         if (!(val in this._nodeLookup)) return false;
         this.clearAllEdgesWith(val);
@@ -61,8 +62,13 @@ export abstract class Graph {
         return true;
     }
 
+    get startNode() {return this._startNode}
+    set startNode(node) {this._startNode = node; this.markDirtyRender();}
+    get endNode() {return this._endNode}
+    set endNode(node) {this._endNode = node; this.markDirtyRender();}
+
     // Edge operations
-    protected clearAllEdgesWith(nodeId: string) {
+    public clearAllEdgesWith(nodeId: string) {
         this.ensureLookupClean();
         if (!(nodeId in this._edgeLookup)) return;
         for (let edge of this._edgeLookup.get(nodeId)!) {
@@ -80,7 +86,7 @@ export abstract class Graph {
         }
     }
 
-    protected addEdge(edgeData: GraphEdge) {
+    public addEdge(edgeData: GraphEdge) {
         this.ensureEdgeLookupExists(edgeData.source.id);
         this._edgeLookup.get(edgeData.source.id)!.push(edgeData);
         this.ensureEdgeLookupExists(edgeData.target.id);
@@ -88,13 +94,23 @@ export abstract class Graph {
         this.markDirtyRender();
     }
 
-    protected removeEdge(edgeData: GraphEdge) {
+    public removeEdge(edgeData: GraphEdge) {
         this.ensureLookupClean();
         const srcEdgeList = this._edgeLookup.get(edgeData.source.id)!
         srcEdgeList.splice(srcEdgeList.indexOf(edgeData), 1);
         const tarEdgeList = this._edgeLookup.get(edgeData.target.id)!
         tarEdgeList.splice(tarEdgeList.indexOf(edgeData.reverse()), 1);
         this.markDirtyRender();
+    }
+
+    public getEdge(sourceNode: GraphNode, targetNode: GraphNode): GraphEdge | undefined {
+        this.ensureLookupClean();
+        let edges = this._edgeLookup.get(sourceNode.id);
+        if (!edges) return undefined;
+        for (let edge of edges) {
+            if (edge.target.id == targetNode.id) return edge;
+        }
+        return undefined;
     }
 
     // Useful functions for algorithms
@@ -115,19 +131,19 @@ export abstract class Graph {
         }
     }
 
-    getNodeById(id: string): GraphNode | undefined {
+    public getNodeById(id: string): GraphNode | undefined {
         if (!(id in this._nodeLookup)) return undefined;
         return this._nodeLookup.get(id);
     }
 
-    getNextIdentifier() {
+    public getNextIdentifier() {
         let potentialIdNum = Object.keys(this._nodeLookup).length;
         while (String(potentialIdNum) in this._nodeLookup) {potentialIdNum++;}
         return String(potentialIdNum);
     }
 
     // Graph notation functions
-    static parseGraph(text: string): Graph {
+    public static parseGraph(text: string): Graph {
         const lines = text.split(/\r?\n/);
         if (lines.length == 0) throw new ParsingError("The graph expression must have at least 1 line indicating the graph type.", 0, 0);
         if (lines[0].startsWith("GENERIC")) {
@@ -155,13 +171,21 @@ export class GridGraph extends Graph {
     }
 
     static fromGraphNotation(lines: string[]): GridGraph {
-        let match = lines[0].match(/GRID\s+(\d+)x(\d+)/);
-        if (match === null) throw new ParsingError("The GRID graph type requires two dimensions expressed in the format <WIDTH>x<HEIGHT> following the GRID specifier", 0, "GRID ".length, "GRID 10x8")
-        let [width, height] = [match[1], match[2]].map(parseInt);
-        let result = new GridGraph(width, height);
-        // EXTRA LOGIC (TO BE IMPLEMENTED)
-        throw new NotImplementedError("Grid Graph Parsing");
-        return result;
+        return gridGraphFromNotation(lines);
+    }
+
+    static idFromCoords(x: number, y: number): string {
+        return `${x}_${y}`;
+    }
+
+    createNode(x: number, y: number, data: Object = {}): GraphNode {
+        let node = new GraphNode(this, GridGraph.idFromCoords(x, y), x, y, data);
+        this.addNode(node);
+        return node;
+    }
+
+    getNodeByCoords(x: number, y: number): GraphNode | undefined {
+        return this.getNodeById(GridGraph.idFromCoords(x, y));
     }
 
     stringify(): string {
@@ -177,11 +201,7 @@ export class GenericGraph extends Graph {
     }
 
     static fromGraphNotation(lines: string[]): GenericGraph {
-        let result = new GenericGraph();
-        for (let i = 1; i < lines.length; i++) {
-            throw new NotImplementedError("Generic Graph Parsing");
-        }
-        return result;
+        return genericFromGraphNotation(lines);
     }
 
     stringify(): string {
@@ -222,11 +242,11 @@ export class GraphEdgeSimple implements GraphEdge {
     protected _source: GraphNode;
     protected _target: GraphNode;
     protected _isBidirectional: boolean;
-    protected _data: Record<string, Object>;
+    protected _data: Record<string, any>;
     protected _style: GraphEdgeStyle;
     private _reverse: ReverseGraphEdgeRef;
 
-    constructor(source: GraphNode, target: GraphNode, isBidirectional: boolean = false, data: Record<string, Object> = {}) {
+    constructor(source: GraphNode, target: GraphNode, isBidirectional: boolean = false, data: Record<string, any> = {}) {
         this._source = source;
         this._target = target;
         this._isBidirectional = isBidirectional;
