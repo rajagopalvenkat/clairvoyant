@@ -1,6 +1,35 @@
+"use client"
+
 import Image from 'next/image'
+import ReactDOM from "react-dom/client";
+import HomePage from './pages/homePage';
+import { PROBLEMS } from '@/lib/statics/appConstants';
+import Logo from './components/logo';
+import Header from './components/header';
 
 export default function Home() {
+  return (
+    <main>
+      <Header selectedPage='home'></Header>
+    </main>
+  )
+  /*
+  return (
+    <main>
+      <Router>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          {Object.keys(PROBLEMS).map(problemId => {
+            const problem = PROBLEMS[problemId];
+            return (
+              <Route path={problem.href} element={problem.element} key={problemId}></Route>
+            )
+          })}
+        </Routes>
+      </Router>
+    </main>
+  )*/
+  /*
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
@@ -109,5 +138,5 @@ export default function Home() {
         </a>
       </div>
     </main>
-  )
+  )*/
 }
