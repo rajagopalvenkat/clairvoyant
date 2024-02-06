@@ -24,6 +24,12 @@ export class ParsingError extends Error {
     }
 }
 
+export class RuntimeError extends Error {
+    constructor(message: string) {
+        super(message);
+    }
+}
+
 export class NotImplementedError extends Error {
     feature: string;
     constructor(feature: string) {

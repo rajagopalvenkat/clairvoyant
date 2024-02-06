@@ -1,6 +1,6 @@
 // These values are mostly placeholders, meant to be replaced with more refined values, and potentially specialized into multiple constants or functions
 
-import GraphSearchPage from "@/app/pages/problems/graphSearch"
+import GraphSearchPage from "@/app/problems/graph-search/page"
 import React from "react"
 
 export const APP_NAME = "AI Visualizer"

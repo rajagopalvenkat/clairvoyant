@@ -1,9 +1,9 @@
-import { NotImplementedError, ParsingError } from "../errors/error";
-import { genericFromGraphNotation, gridGraphFromNotation } from "./parsing";
+import { NotImplementedError, ParsingError, RuntimeError } from "../errors/error";
+import { genericFromGraphNotation, gridGraphFromNotation, notationFromGenericGraph, notationFromGridGraph } from "./parsing";
 
 export abstract class Graph {
     protected _nodeLookup = new Map<string, GraphNode>(); // Used for data/existence access
-    protected _edgeLookup = new Map<string, GraphEdge[]>() // Used to look up connections to/from nodes
+    protected _edgeLookup = new Map<string, GraphEdge[]>(); // Used to look up connections to/from nodes
     protected isDirtyLookup: boolean = false;
     protected isDirtyRender: boolean = false;
     protected _startNode: GraphNode | null = null;
@@ -49,6 +49,7 @@ export abstract class Graph {
     // Node Operations
     public addNode(node: GraphNode) {
         this._nodeLookup.set(node.id, node);
+        //console.log(JSON.stringify([...this._nodeLookup.entries()]));
         this.markDirtyRender();
     }
     public removeNode(node: GraphNode): boolean;
@@ -132,7 +133,7 @@ export abstract class Graph {
     }
 
     public getNodeById(id: string): GraphNode | undefined {
-        if (!(id in this._nodeLookup)) return undefined;
+        if (!(this._nodeLookup.has(id))) return undefined;
         return this._nodeLookup.get(id);
     }
 
@@ -187,11 +188,14 @@ export class GridGraph extends Graph {
     getNodeByCoords(x: number, y: number): GraphNode | undefined {
         return this.getNodeById(GridGraph.idFromCoords(x, y));
     }
+    ensureGetNodeByCoords(x: number, y: number) : GraphNode {
+        const node = this.getNodeByCoords(x, y);
+        if (node == undefined) throw new RuntimeError(`Error during node fetching. Attempted to read node ${GridGraph.idFromCoords(x, y)}. Node lookup: ${JSON.stringify([...this._nodeLookup.entries()].map(([id, node]) => {return `${id}=>${JSON.stringify(node)}`}))}`);
+        return node;
+    }
 
     stringify(): string {
-        let lines = [`GRID ${this.width}x${this.height}`];
-        throw new NotImplementedError("Generic Graph Stringification");
-        return lines.join("\n");
+        return notationFromGridGraph(this);
     }
 }
 
@@ -205,9 +209,7 @@ export class GenericGraph extends Graph {
     }
 
     stringify(): string {
-        let lines = ["GENERIC"];
-        throw new NotImplementedError("Generic Graph Stringification");
-        return lines.join("\n");
+        return notationFromGenericGraph(this);
     }
 }
 

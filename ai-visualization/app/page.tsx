@@ -2,15 +2,18 @@
 
 import Image from 'next/image'
 import ReactDOM from "react-dom/client";
-import HomePage from './pages/homePage';
-import { PROBLEMS } from '@/lib/statics/appConstants';
+import { APP_NAME, PROBLEMS } from '@/lib/statics/appConstants';
 import Logo from './components/logo';
 import Header from './components/header';
+import { useRouter } from "next/router"
 
 export default function Home() {
   return (
-    <main>
-      <Header selectedPage='home'></Header>
+    <main className="w-full h-full bg-primary-bg dark:bg-primary-bg-dark">
+      <Header selectedPage={'home'}></Header>
+      <div>
+        <p>This is the home page of {APP_NAME}</p>
+      </div>
     </main>
   )
   /*

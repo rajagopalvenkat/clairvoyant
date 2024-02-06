@@ -11,7 +11,7 @@ const config: Config = {
       'primary': '#0a153b',
       'secondary': '#073e6b',
       'accent': '#6504db',
-      'primary-bg': '#afbae3',
+      'primary-bg': '#d5dff0',
       'secondary-bg': '#c5d8f0',
       'primary-dark': '#bfc7e3',
       'secondary-dark': '#a4c4de',

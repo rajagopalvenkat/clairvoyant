@@ -1,4 +1,4 @@
-import { ParsingError } from "../errors/error";
+import { NotImplementedError, ParsingError } from "../errors/error";
 import { GenericGraph, Graph, GraphEdgeSimple, GraphEdgeStyle, GraphNode, GraphNodeStyle, GridGraph } from "./graph";
 
 function removeQuotes(s: string): string {
@@ -37,13 +37,13 @@ function ensureGetNodeByCoords(graph: GridGraph, x: number, y: number, phase: st
 
 function getSingleNodeFromCoordArgs(graph: GridGraph, coordArgs: string[], phase: string, lineIdx: number, cmd: string): GraphNode {
     ensureArgsLength(coordArgs, 2, phase, lineIdx, cmd);
-    let [x, y] = coordArgs.map(parseInt);
+    let [x, y] = coordArgs.map(n => {return parseInt(n,10)});
     return ensureGetNodeByCoords(graph, x, y, phase, lineIdx);
 }
 
 function getNodesFromCoordArgs(graph: GridGraph, coordArgs: string[], phase: string, lineIdx: number, cmd: string, nodeCount: number = 2): GraphNode[] {
     ensureArgsLength(coordArgs, 2 * nodeCount, phase, lineIdx, cmd);
-    let nums = coordArgs.map(parseInt);
+    let nums = coordArgs.map(n => {return parseInt(n,10)});
     let result = [];
     for (let i = 0; i < 2 * nodeCount; i+=2) {
         let [x, y] = [nums[i], nums[i+1]];
@@ -53,18 +53,20 @@ function getNodesFromCoordArgs(graph: GridGraph, coordArgs: string[], phase: str
 }
 
 const stmt_regex = /(?<cmd>[A-Z]+) +(?<args>( *("[^"]+"|\w+))+)(?<opts>( +-[\-a-zA-Z0-9]+)*)(?<data> *\{.+\})?/;
+const arg_regex = /"[^"]+"|\w+/g;
 function parseCommand(line: string, lineIdx: number): {cmd: string, args: string[], opts: string[], data: Object} | undefined {
     if (line.trim() == "") return undefined;
     if (line.startsWith("#")) return undefined;
-    let match = stmt_regex.exec(line)
+    const match = stmt_regex.exec(line);
     if (!match) throw invalidCommandSyntax(lineIdx);
-    let cmd = match.groups!["cmd"];
-    let argsRaw = match.groups!["args"];
-    let optsRaw = match.groups!["opts"];
-    let dataRaw = match.groups!["data"];
-    let data: Object = dataRaw ? JSON.parse(dataRaw) : {};
-    let args: string[] = /"[^"]+"|\w+/g.exec(argsRaw)!.map(s => removeQuotes(s))
-    let opts: string[] = optsRaw.split(/\s+/)
+    const cmd = match.groups!["cmd"];
+    const argsRaw = match.groups!["args"];
+    const optsRaw = match.groups!["opts"];
+    const dataRaw = match.groups!["data"];
+    const data: Object = dataRaw ? JSON.parse(dataRaw) : {};
+    const argsMatch: RegExpMatchArray[] = [... argsRaw.matchAll(arg_regex)];
+    const args = argsMatch.map(s => removeQuotes(s[0]));
+    const opts: string[] = optsRaw.split(/\s+/);
     return {"cmd": cmd, "data": data, "args": args, "opts": opts};
 }
 
@@ -122,18 +124,18 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
     }
     for (let i = 1; i < y + 1; i++) {
         // parsing, to include edges and set default styles
-        let line = lines[i];
+        let line = lines[i].trim();
         let vals = line.split(/\s+/).map(parseInt);
         if (vals.length != x) throw new ParsingError(`Invalid grid row, expected ${x} numeric values, got ${vals.length}`, i, 0, "1 ".repeat(x).trimEnd());
         for (let j = 0; j < x; j++) {
-            let node = result.getNodeByCoords(i - 1, j)!;
+            let node = result.ensureGetNodeByCoords(i - 1, j);
             let val = vals[j];
             node.data["traversable"] = val;
             node.style = val == 0 ? defaultUntraversibleStyle : defaultTraversibleStyle;
         }
     }
     for (let i = y + 1; i < lines.length; i++) {
-        let line = lines[i];
+        let line = lines[i].trim();
         let parsedCmd = parseCommand(line, i);
         if (parsedCmd === undefined) continue;
         let {cmd, args, opts, data} = parsedCmd;
@@ -160,4 +162,28 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
         }
     }
     return result;
+}
+
+export function notationFromGridGraph(graph: GridGraph): string {
+    let lines = [`GRID ${graph.width}x${graph.height}`];
+        //throw new NotImplementedError("Generic Graph Stringification");
+        for (let x = 0; x < graph.width; x++) {
+            let nodeReprs: string[] = []
+            for (let y = 0; y < graph.height; y++) {
+                let node = graph.getNodeByCoords(x, y);
+                if (!node) {
+                    nodeReprs.push(`?${GridGraph.idFromCoords(x, y)}`);
+                    continue;
+                }
+                nodeReprs.push(node.data["traversable"] == 0 ? "0" : "1")
+            }
+            lines.push(nodeReprs.join(" "))
+        } 
+        return lines.join("\n");
+}
+
+export function notationFromGenericGraph(graph: GenericGraph): string {
+    let lines = ["GENERIC"];
+    throw new NotImplementedError("Generic Graph Stringification");
+    return lines.join("\n");
 }
