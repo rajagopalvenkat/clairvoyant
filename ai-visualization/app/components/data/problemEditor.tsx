@@ -1,3 +1,4 @@
+import { getCase, getCases } from "@/lib/api/problems";
 import { iteratorToArray } from "@/lib/collections/arrays";
 import { API_URL } from "@/lib/statics/appConstants";
 import { buttonStyleClassNames } from "@/lib/statics/styleConstants";
@@ -15,10 +16,8 @@ export default function CaseEditor({problem}: {problem: string}) {
 
     useEffect(() => {
         if (!problem) return;
-        fetch(`${API_URL}/${problem}/cases`)
-        .then(response => response.json())
-        .then(json => {
-            let responseCases = json as string[];
+        getCases(problem)
+        .then(responseCases => {
             setDefaultCases(responseCases);
             setCaseId(responseCases[0])
         })
@@ -27,8 +26,7 @@ export default function CaseEditor({problem}: {problem: string}) {
 
     useEffect(() => {
         if (!caseId || !problem) return;
-        fetch(`${API_URL}/${problem}/cases/${caseId}`)
-        .then(response => response.json())
+        getCase(problem, caseId)
         .then(json => {
             let responseCaseData = json as string;
             setCaseData(responseCaseData);

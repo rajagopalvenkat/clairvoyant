@@ -1,3 +1,4 @@
+import { getSolution, getSolutions } from "@/lib/api/problems";
 import { API_URL } from "@/lib/statics/appConstants";
 import { buttonStyleClassNames } from "@/lib/statics/styleConstants";
 import { capitalize } from "@/lib/strings/pretty";
@@ -14,25 +15,19 @@ export default function SolutionEditor({problem}: {problem: string}) {
 
     useEffect(() => {
         if (!problem) return;
-        fetch(`${API_URL}/${problem}/algorithms`)
-        .then(response => response.json())
-        .then(json => {
-            let responseCases = json as string[];
+        getSolutions(problem)
+        .then(responseCases => {
             setDefaultAlgorithms(responseCases);
             setAlgoId(responseCases[0])
         })
-        .catch(err => console.error(err));
     }, [problem])
 
     useEffect(() => {
         if (!algoId || !problem) return;
-        fetch(`${API_URL}/${problem}/algorithms/${algoId}`)
-        .then(response => response.json())
-        .then(json => {
-            let responseCaseData = json as string;
+        getSolution(problem, algoId)
+        .then(responseCaseData => {
             setAlgoData(responseCaseData);
         })
-        .catch(err => console.error(err));
     }, [problem, algoId])
 
     return (
