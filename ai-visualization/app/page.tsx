@@ -9,7 +9,7 @@ import { useRouter } from "next/router"
 
 export default function Home() {
   return (
-    <main className="w-full h-full bg-primary-bg dark:bg-primary-bg-dark">
+    <main>
       <Header selectedPage={'home'}></Header>
       <div>
         <p>This is the home page of {APP_NAME}</p>

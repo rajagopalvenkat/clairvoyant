@@ -11,7 +11,7 @@ export default function Header({selectedPage}: {selectedPage: string}) {
     }))
 
     return (
-    <div className="bg-secondary-bg dark:bg-secondary-bg-dark flex flex-row items-stretch">
+    <div className="bg-secondary-100 dark:bg-secondary-900 flex flex-row items-stretch">
         <div className="p-3 pl-5">
             <Logo></Logo>
         </div>
@@ -19,10 +19,10 @@ export default function Header({selectedPage}: {selectedPage: string}) {
             {links.map(link => {
                 const selected: boolean = link.id == selectedPage;
                 return (
-                    <div key={link.id} className={`flex flex-col justify-center ${selected ? 'bg-gradient-to-b from-secondary-bg to-primary-bg dark:from-secondary-bg-dark dark:to-primary-bg-dark' : ''}`}>
+                    <div key={link.id} className={`flex flex-col justify-center ${selected ? 'bg-gradient-to-b from-secondary-100 to-primary-100 dark:from-secondary-900 dark:to-primary-900' : ''}`}>
                         <Link className={`m-3 ${selected 
-                            ? 'text-secondary dark:text-secondary-dark underline font-bold' 
-                            : 'text-secondary dark:text-secondary-dark'}`} 
+                            ? 'text-secondary dark:text-secondary-200 underline font-bold' 
+                            : 'text-secondary dark:text-secondary-200'}`} 
                         href={link.url}>{link.text}</Link>
                     </div>
                 )
