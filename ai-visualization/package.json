@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@uiw/react-codemirror": "^4.21.21",
+    "highlight.js": "^11.9.0",
     "localforage": "^1.10.0",
     "match-sorter": "^6.3.3",
     "next": "14.0.4",

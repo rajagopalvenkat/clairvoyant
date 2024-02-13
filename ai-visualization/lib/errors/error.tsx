@@ -1,7 +1,7 @@
 /// This function exists for the purpose of ensuring that thrown values which
 /// are caught, are definitely errors! If the caught value is not an error,
 /// it will be wrapped in an error and then returned.
-function ensureError(value: unknown): Error {
+export function ensureError(value: unknown): Error {
     if (value instanceof Error) return value;
     let stringified = "[Unable to stringify error value]";
     try {

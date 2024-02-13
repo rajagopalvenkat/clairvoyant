@@ -32,6 +32,16 @@ const config: Config = {
         DEFAULT: '#6504db',
         200: '#a074d6',
         800: '#6504db'
+      },
+      'danger': {
+        DEFAULT: '#690a00', 
+        50: '#e8ccca',
+        100: '#e3aba6',
+        200: '#d99089',
+        500: '#c43427',
+        800: '#690a00',
+        900: '#3d0600',
+        950: '#210300'
       }/*,
       'primary-bg': '#d5dff0',
       'secondary-bg': '#c5d8f0',
