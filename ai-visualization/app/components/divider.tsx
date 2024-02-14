@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 
 export function VDivider({onWidthChangeRequest}: {
     onWidthChangeRequest: (v: number) => void
@@ -6,31 +6,80 @@ export function VDivider({onWidthChangeRequest}: {
     let [mouseX, setMouseX] = useState(0);
     let [draggingX, setDraggingX] = useState(false);
 
-    function startDragging(_event: {clientX: number}) {
+    let startDragging = useCallback((event: any) => {
         setDraggingX(true);
-        console.log("Started drag")
-        mouseX = _event.clientX;
-    }
-    function stopDragging(_event: {clientX: number}) {
-        console.log("Stopped drag")
-        setDraggingX(false);
-    }
+        console.log("Started drag");
+        setMouseX(event.clientX);
+    }, [])
 
     useEffect(() => {
-        const handleMouseMove = (event: {clientX: number}) => {
+        const stopDragging = (event: any) => {
             if (draggingX) {
                 onWidthChangeRequest(event.clientX - mouseX);
-                console.log(event.clientX - mouseX);
             }
+            setDraggingX(false);
             setMouseX(event.clientX);
         }
-        window.addEventListener("mousemove", handleMouseMove);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [draggingX]);
+        const execDragging = (event: any) => {
+            if (draggingX) {
+                onWidthChangeRequest(event.clientX - mouseX);
+            }
+            setMouseX(event.clientX)
+        }
+        window.addEventListener("mousemove", execDragging);
+        window.addEventListener("mouseup", stopDragging);
+        return () => {
+            window.removeEventListener("mousemove", execDragging);
+            window.removeEventListener("mouseup", stopDragging);
+        }
+    }, [draggingX, mouseX, onWidthChangeRequest]);
 
     return (
-        <button className="h-100 border-secondary-50 dark:border-secondary-950 ml-2 border bg-secondary-100 dark:bg-secondary-900" onMouseDown={startDragging} onMouseUp={stopDragging}>
+        <button className="h-100 ml-2 border border-secondary-50 dark:border-secondary-950 bg-secondary-100 dark:bg-secondary-900" 
+            onMouseDown={startDragging}>
             ||
+        </button>
+    )
+}
+
+export function HDivider({onWidthChangeRequest}: {
+    onWidthChangeRequest: (v: number) => void
+}) {
+    let [mouseY, setMouseY] = useState(0);
+    let [draggingY, setDraggingY] = useState(false);
+
+    let startDragging = useCallback((event: any) => {
+        setDraggingY(true);
+        console.log("Started drag");
+        setMouseY(event.clientY);
+    }, [])
+
+    useEffect(() => {
+        const stopDragging = (event: any) => {
+            if (draggingY) {
+                onWidthChangeRequest(event.clientY - mouseY);
+            }
+            setDraggingY(false);
+            setMouseY(event.clientY);
+        }
+        const execDragging = (event: any) => {
+            if (draggingY) {
+                onWidthChangeRequest(event.clientY - mouseY);
+            }
+            setMouseY(event.clientY)
+        }
+        window.addEventListener("mousemove", execDragging);
+        window.addEventListener("mouseup", stopDragging);
+        return () => {
+            window.removeEventListener("mousemove", execDragging);
+            window.removeEventListener("mouseup", stopDragging);
+        }
+    }, [draggingY, mouseY, onWidthChangeRequest]);
+
+    return (
+        <button className="w-100 mt-2 border border-secondary-50 dark:border-secondary-950 bg-secondary-100 dark:bg-secondary-900" 
+            onMouseDown={startDragging}>
+            ==
         </button>
     )
 }

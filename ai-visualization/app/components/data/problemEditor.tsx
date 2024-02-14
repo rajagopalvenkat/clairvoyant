@@ -39,7 +39,7 @@ export default function CaseEditor({problem, errorMessage, caseData, onCaseDataC
     }, [problem])
 
     return (
-    <div className="h-50 flex flex-col items-stretch">
+    <div className="flex-grow flex flex-col items-stretch">
         <h2>Case: </h2>
         <Select unstyled classNames={{
             control: (state) => {return `${buttonStyleClassNames} rounded pl-2 border-solid border-2 border-secondary-50 dark:border-secondary-950`}, 

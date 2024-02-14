@@ -7,7 +7,7 @@ import CaseEditor from "@/app/components/data/problemEditor";
 import { Graph, GridGraph } from "@/lib/graphs/graph";
 import { useState } from "react";
 import { ensureError } from "@/lib/errors/error";
-import { VDivider } from "@/app/components/divider";
+import { HDivider, VDivider } from "@/app/components/divider";
 
 const init_graph : Graph | null = null;
 
@@ -27,18 +27,18 @@ export default function GraphSearchPage() {
     }
     let [graphData, setGraphData] = useState("");
     let [leftWidth, setLeftWidth] = useState(480);
+    let [solHeight, setSolHeight] = useState(520);
 
     return (
         <div className="flex flex-col h-dvh">
             <Header selectedPage="graphsearch"></Header>
             <div className="flex flex-row items-stretch flex-grow">
                 <div className="flex flex-col justify-stretch" style={{"width": `${leftWidth}px`}}>
-                    <div className="flex-grow">
-                        <SolutionEditor problem={"graph-search"}></SolutionEditor>
-                    </div>
-                    <div className="flex-grow">
-                        <CaseEditor problem={"graph-search"} caseData={graphData} onCaseDataChanged={onGraphDataChanged} errorMessage={graphErrorMessage}></CaseEditor>
-                    </div>
+                    <SolutionEditor solutionHeight={solHeight} problem={"graph-search"}></SolutionEditor>
+                    <HDivider onWidthChangeRequest={function (v: number): void {
+                        setSolHeight(solHeight + v);
+                    } }></HDivider>
+                    <CaseEditor problem={"graph-search"} caseData={graphData} onCaseDataChanged={onGraphDataChanged} errorMessage={graphErrorMessage}></CaseEditor>
                 </div>
                 <VDivider onWidthChangeRequest={(v => {
                     setLeftWidth(leftWidth + v);

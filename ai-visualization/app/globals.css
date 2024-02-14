@@ -7,4 +7,9 @@
 }
 .cm-editor {
   height: 100%;
+  color: inherit!important; /*For some reason, the default cm-editor has background-color: #fff*/
+  background-color: inherit!important; 
+}
+*:has(.cm-editor) {
+  width: 100%;
 }

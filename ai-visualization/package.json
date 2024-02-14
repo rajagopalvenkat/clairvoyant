@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@codemirror/lang-javascript": "github:codemirror/lang-javascript",
     "@uiw/react-codemirror": "^4.21.21",
     "highlight.js": "^11.9.0",
     "localforage": "^1.10.0",
