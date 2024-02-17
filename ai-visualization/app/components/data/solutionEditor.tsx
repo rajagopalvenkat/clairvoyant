@@ -28,12 +28,12 @@ export default function SolutionEditor({problem, solutionHeight}: {
         "light": EditorView.theme({
             "": {},
             ".cm-scroller": {overflow: "auto", "flex-grow": "1", "width": "100%", "background-color": "#eee", color: "#112"},
-            ".cm-content": {caretColor: "#013"}
+            ".cm-cursor": {borderLeftColor: "#013"}
         }, {dark: false}),
         "dark": EditorView.theme({
             "": {},
             ".cm-scroller": {overflow: "auto", "flex-grow": "1", "width": "100%", "background-color": "#0c1b2f", color: "#ddf"},
-            ".cm-content": {caretColor: "#0ea"}
+            ".cm-cursor": {borderLeftColor: "#bfe"}
         }, {dark: true})
     }
     const highlights: Record<string, HighlightStyle> = {
@@ -100,8 +100,9 @@ export default function SolutionEditor({problem, solutionHeight}: {
             <button onClick={toggleTheme}>Theme: {currentTheme}</button>
         </div>
         <Select unstyled classNames={{
-            control: (state) => {return `${buttonStyleClassNames} rounded pl-2 border-solid border-2 border-secondary-50 dark:border-secondary-950`}, 
-            option: (state) => {return `${buttonStyleClassNames} p-1`}}}
+                control: (state) => {return `${buttonStyleClassNames} rounded pl-2 border-solid border-2 border-secondary-50 dark:border-secondary-950`}, 
+                option: (state) => {return `${buttonStyleClassNames} p-1`}
+            }}
             options={defaultAlgorithms.map(n => {return {value: n, label: capitalize(n)}})} 
             onChange={e => {setAlgoId(e?.value ?? ""); fetchAlgorithm();}}>
         </Select>
