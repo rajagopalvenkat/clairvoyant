@@ -15,11 +15,11 @@ export class ParsingError extends Error {
     line: number;
     col: number;
     example: string | null;
-    constructor(message: string, line: number, col: number, example: string | null = null) {
-        super(`Parsing error at line ${line}, col ${col}: ${message}.${example === null ? '' : ` EXAMPLE SYNTAX: \"${example}\".`}`);
+    constructor(message: string, lineIdx: number, colIdx: number, example: string | null = null) {
+        super(`Parsing error at line ${lineIdx + 1}, col ${colIdx + 1}: ${message}.${example === null ? '' : ` EXAMPLE SYNTAX: \"${example}\".`}`);
         this.includedMessage = message;
-        this.line = line;
-        this.col = col;
+        this.line = lineIdx + 1;
+        this.col = colIdx + 1;
         this.example = example;
     }
 }

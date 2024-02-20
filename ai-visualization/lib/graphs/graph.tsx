@@ -1,6 +1,13 @@
 import { NotImplementedError, ParsingError, RuntimeError } from "../errors/error";
 import { genericFromGraphNotation, gridGraphFromNotation, notationFromGenericGraph, notationFromGridGraph } from "./parsing";
 
+export const ADJACENT_DELTAS = [
+    [0, 1], [0, -1], [1, 0], [-1, 0]
+];
+export const ADJACENT_POSITIVE_DELTAS = [
+    [0, 1], [1, 0]
+];
+
 export abstract class Graph {
     protected _nodeLookup = new Map<string, GraphNode>(); // Used for data/existence access
     protected _edgeLookup = new Map<string, GraphEdge[]>(); // Used to look up connections to/from nodes
@@ -82,7 +89,7 @@ export abstract class Graph {
     }
 
     protected ensureEdgeLookupExists(id: string) {
-        if (!(id in this._edgeLookup)) {
+        if (!this._edgeLookup.has(id)) {
             this._edgeLookup.set(id, [])
         }
     }
@@ -107,11 +114,20 @@ export abstract class Graph {
     public getEdge(sourceNode: GraphNode, targetNode: GraphNode): GraphEdge | undefined {
         this.ensureLookupClean();
         let edges = this._edgeLookup.get(sourceNode.id);
+        console.log(edges);
         if (!edges) return undefined;
         for (let edge of edges) {
             if (edge.target.id == targetNode.id) return edge;
         }
         return undefined;
+    }
+
+    public getAllEdges(): GraphEdge[] {
+        let edges: GraphEdge[] = [];
+        for (let nodeEdgeList of this._edgeLookup.values()) {
+            edges.push(...nodeEdgeList);
+        }
+        return edges;
     }
 
     // Useful functions for algorithms
