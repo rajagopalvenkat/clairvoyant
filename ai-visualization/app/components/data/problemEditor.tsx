@@ -19,25 +19,25 @@ export default function CaseEditor({problem, errorMessage, caseData, onCaseDataC
 
     let [defaultCases, setDefaultCases] = useState(init_defaultCases);
 
-    function fetchCaseData() {
-        if (!caseId || !problem) return;
-        getCase(problem, caseId)
+    const fetchCaseData = useCallback((forProblem: string, forCaseId: string) => {
+        getCase(forProblem, forCaseId)
         .then(json => {
             let responseCaseData = json as string;
             onCaseDataChanged(responseCaseData);
         })
         .catch(err => console.error(err));
-    }
+    }, [onCaseDataChanged]);
 
     useEffect(() => {
         if (!problem) return;
         getCases(problem)
         .then(responseCases => {
             setDefaultCases(responseCases);
-            setCaseId(responseCases[0])
+            setCaseId(responseCases[0]);
+            fetchCaseData(problem, responseCases[0]);
         })
         .catch(err => console.error(err));
-    }, [problem])
+    }, [fetchCaseData, problem]);
 
     return (
     <div className="flex-grow flex flex-col items-stretch">
@@ -46,8 +46,8 @@ export default function CaseEditor({problem, errorMessage, caseData, onCaseDataC
             <Select unstyled className="flex-grow" classNames={{
                 control: (state) => {return `${buttonStyleClassNames} rounded pl-2 border-solid border-2 border-secondary-50 dark:border-secondary-950`}, 
                 option: (state) => {return `${buttonStyleClassNames} p-1`}}}
-                options={defaultCases.map(n => {return {value: n, label: capitalize(n)}})} 
-                onChange={e => {setCaseId(e?.value ?? ""); fetchCaseData();}}>
+                options={defaultCases.map(n => {return {value: n, label: capitalize(n)}})}   
+                onChange={e => {setCaseId(e?.value ?? ""); fetchCaseData(problem, e?.value ?? "");}}>
             </Select>
             <ClipboardButton textToCopy={caseData} className={`${buttonStyleClassNames} border-2 border-solid border-secondary-50 dark:border-secondary-950 min-w-8 ml-1 rounded px-2`}></ClipboardButton>
         </div>

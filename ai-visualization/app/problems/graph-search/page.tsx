@@ -5,7 +5,7 @@ import GraphView from "./components/graphView";
 import SolutionEditor from "@/app/components/data/solutionEditor";
 import CaseEditor from "@/app/components/data/problemEditor";
 import { Graph, GridGraph } from "@/lib/graphs/graph";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ensureError } from "@/lib/errors/error";
 import { HDivider, VDivider } from "@/app/components/divider";
 
@@ -14,7 +14,7 @@ const init_graph : Graph | null = null;
 export default function GraphSearchPage() {
     let [graph, setGraph] = useState(init_graph);
     let [graphErrorMessage, setGraphErrorMessage] = useState("")
-    function onGraphDataChanged(rawData: string) {
+    const onGraphDataChanged = useCallback((rawData: string) => {
         setGraphData(rawData);
         try {
             setGraph(Graph.parseGraph(rawData));
@@ -24,7 +24,7 @@ export default function GraphSearchPage() {
             let error = ensureError(err);
             setGraphErrorMessage(error.message);
         }
-    }
+    },[])
     let [graphData, setGraphData] = useState("");
     let [leftWidth, setLeftWidth] = useState(480);
     let [solHeight, setSolHeight] = useState(520);

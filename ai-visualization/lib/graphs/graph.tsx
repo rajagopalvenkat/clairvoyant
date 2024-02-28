@@ -117,7 +117,7 @@ export abstract class Graph {
         console.log(edges);
         if (!edges) return undefined;
         for (let edge of edges) {
-            if (edge.target.id == targetNode.id) return edge;
+            if (edge.target.id == targetNode.id && edge.traversable()) return edge;
         }
         return undefined;
     }
