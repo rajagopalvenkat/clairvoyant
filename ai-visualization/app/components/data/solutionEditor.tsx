@@ -99,13 +99,18 @@ export default function SolutionEditor({problem, solutionHeight}: {
             <h2 className="inline-block">Algorithm: </h2>
             <button onClick={toggleTheme}>Theme: {currentTheme}</button>
         </div>
-        <Select unstyled classNames={{
-                control: (state) => {return `${buttonStyleClassNames} rounded pl-2 border-solid border-2 border-secondary-50 dark:border-secondary-950`}, 
-                option: (state) => {return `${buttonStyleClassNames} p-1`}
-            }}
-            options={defaultAlgorithms.map(n => {return {value: n, label: capitalize(n)}})} 
-            onChange={e => {setAlgoId(e?.value ?? ""); fetchAlgorithm();}}>
-        </Select>
+        <div className="flex flex-row mb-1">
+            <Select unstyled className="flex-grow" classNames={{
+                    control: (state) => {return `${buttonStyleClassNames} rounded pl-2 border-solid border-2 border-secondary-50 dark:border-secondary-950`}, 
+                    option: (state) => {return `${buttonStyleClassNames} p-1`}
+                }}
+                options={defaultAlgorithms.map(n => {return {value: n, label: capitalize(n)}})} 
+                onChange={e => {setAlgoId(e?.value ?? ""); fetchAlgorithm();}}>
+            </Select>
+            <a href={`/docs/${problem}`} className={`${buttonStyleClassNames} rounded px-2 border-solid border-2 border-secondary-50 dark:border-secondary-950 flex flex-row justify-around items-center`}>
+                <Image className="dark:invert" src="/DocScroll.png" alt="Documentation Icon" width={24} height={24}></Image>
+            </a>
+        </div>
         <div className="flex-grow flex">
             <ReactCodeMirror style={{height: `${solutionHeight}px`}} lang="javascript" extensions={[themes[currentTheme], syntaxHighlighting(highlights[currentTheme]), js]} value={algoData} onChange={e => setAlgoData(e ?? "")}>
             </ReactCodeMirror>

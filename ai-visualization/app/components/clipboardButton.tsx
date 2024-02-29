@@ -16,7 +16,7 @@ export default function ClipboardButton({textToCopy, className, customCopyMessag
     return (
         <>
             <button className={className} onClick={copyToClipboard}>
-                <Image width={24} height={24} src={"/clipboard_copy.webp"} alt={"Copy to Clipboard Icon"}></Image>
+                <Image className="dark:invert" width={24} height={24} src={"/clipboard_copy.webp"} alt={"Copy to Clipboard Icon"}></Image>
             </button>
             <ToastContainer/>
         </>
