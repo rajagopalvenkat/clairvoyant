@@ -1,4 +1,4 @@
-let Solution = class extends GraphSearchSolution {
+class DFSSolution {
     constructor(graph) {
         this.visited = {};
         this.graph = graph;
@@ -6,23 +6,26 @@ let Solution = class extends GraphSearchSolution {
     
     solve(start, goal) {
         this.visited[start.id] = true;
-        if (this.solve_internal(start, goal, graph)) {
-            return success(); // Success is an external function in GraphSearchSolution that enables visualization
+        if (this.dfs(start, goal)) {
+            return this.success(); // Success is a function in GraphSearchSolution that enables visualization
+        } else {
+            return this.failure(); // Failure is a function in GraphSearchSolution that enables visualization
         }
-        return failure(); // Failure is an external function in GraphSearchSolution that enables visualization
     }
 
-    solve_internal(current, goal, graph) {
-        expand(current) // Expand is an external function in GraphSearchSolution that enables visualization
+    dfs(current, goal) {
         if (current.id == goal.id) {
             return true;
         }
         
-        for (let adj of graph.getAdjacentNodes(current)) {
-            if (adj.id in visited) {continue;}
-            visit(adj) // Visit is an external function in GraphSearchSolution that enables visualization
+        let neighbors = Array.from(this.graph.getAdjacentNodes(current));
+        let message = "Expanding node " + current.id + " with neighbors " + neighbors.map(n => n.id).join(", ");
+        this.expand(current, message) // Expand is a function in GraphSearchSolution that enables visualization
+        for (let adj of neighbors) {
+            if (adj.id in this.visited) {continue;}
+            this.visit(adj) // Visit is a function in GraphSearchSolution that enables visualization
             this.visited[adj.id] = true;
-            if (this.solve(adj, goal, graph)) {
+            if (this.dfs(adj, goal, this.graph)) {
                 return true;
             }
         }
@@ -30,3 +33,4 @@ let Solution = class extends GraphSearchSolution {
         return false;
     }
 }
+DFSSolution.prototype;

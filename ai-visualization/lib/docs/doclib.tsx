@@ -1,9 +1,11 @@
 import DocsRef from "@/app/components/docs/docsReference";
 import { ReactNode } from "react";
+import { renderValue } from "../strings/pretty";
 
 export interface DocArg {
     name: string,
-    type?: DocType
+    type?: DocType,
+    default?: any
 }
 
 export interface DocType {
@@ -133,7 +135,7 @@ export function formatArgs(args: DocArg[]) {
     result = args.map((n,i,arr) => {
         let elemSeparator = i == arr.length - 1 ? "" : ", "
         return (
-            <span key={i}>{n.name} : {n.type?.render() ?? "any"}{elemSeparator}</span>
+            <span key={i}>{n.name} : {n.type?.render() ?? "any"}{n.default !== undefined ? renderValue(n.default, " = ", "", i + arr.length) : ""}{elemSeparator}</span>
         )
     })
     return (

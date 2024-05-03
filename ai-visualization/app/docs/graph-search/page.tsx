@@ -18,8 +18,8 @@ export default function GraphSearchDocs() {
             <Header selectedPage="graphsearch"></Header>
             <DocsContainer title={"Graph Search Documentation"}>
                 <div>
-                This documentation refers to the Graph Search problem. Your solution should be a 
-                class extending <a href="#GraphSearchSolution">GraphSearchSolution</a>, which overrides the following functions:
+                This documentation refers to the Graph Search problem. Your solution class will <b>automatically</b>  
+                extend <a href="#GraphSearchSolution">GraphSearchSolution</a>, which provides the following functions:
                 </div>
                 <ul className="list-disc *:ml-5">
                     <li><a href="#GraphSearchSolution.constructor">constructor</a></li>
@@ -39,21 +39,32 @@ export default function GraphSearchDocs() {
 
                         <p>You can return <DocsRef refs="GraphSearchSolution.success">success()</DocsRef> or <DocsRef refs="GraphSearchSolution.failure">failure()</DocsRef> as a shorthand.</p>
                     </DocsFunction>
-                    <DocsFunction clazzName="GraphSearchSolution" functionName="success" args={[]}>
+                    <DocsFunction clazzName="GraphSearchSolution" functionName="success" args={[
+                        {name: "debugValue", type: ConstDocAny, default: null}
+                    ]}>
                         <p>This function declares the successful completion of the algorithm.</p>
                     </DocsFunction>
-                    <DocsFunction clazzName="GraphSearchSolution" functionName="failure" args={[]}>
+                    <DocsFunction clazzName="GraphSearchSolution" functionName="failure" args={[
+                        {name: "debugValue", type: ConstDocAny, default: null}
+                    ]}>
                         <p>This function declares the unsuccessful completion of the algorithm.</p>
                     </DocsFunction>
                     <DocsFunction clazzName="GraphSearchSolution" functionName="expand" args={[
-                        {name: "node", type: GraphNodeType}
+                        {name: "node", type: GraphNodeType},
+                        {name: "debugValue", type: ConstDocAny, default: null}
                     ]}>
                         <p>This will mark a node as expanded in the graphical interface</p>
                     </DocsFunction>
                     <DocsFunction clazzName="GraphSearchSolution" functionName="visit" args={[
-                        {name: "node", type: GraphNodeType}
+                        {name: "node", type: GraphNodeType},
+                        {name: "debugValue", type: ConstDocAny, default: null}
                     ]}>
                         <p>This will mark a node as visited in the graphical interface</p>
+                    </DocsFunction>
+                    <DocsFunction clazzName="GraphSearchSolution" functionName="log" args={[
+                        {name: "debugValue", type: ConstDocAny, default: null}
+                    ]}>
+                        <p>This allows you to display some value without advancing the algorithm</p>
                     </DocsFunction>
                 </DocsClass>
                 <DocsClass clazzName={"Graph"}>

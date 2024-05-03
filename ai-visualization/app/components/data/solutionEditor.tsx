@@ -13,13 +13,18 @@ import { javascriptLanguage, javascript } from "@codemirror/lang-javascript";
 
 const init_defaultAlgos: string[] = []
 
+const js = javascript();
 
-export default function SolutionEditor({problem, solutionHeight}: {
+export default function SolutionEditor({problem, solutionHeight, errorMessage, runner, solutionChanged: onSolutionChanged}: {
     problem: string,
-    solutionHeight: number
+    solutionHeight: number,
+    errorMessage: string,
+    runner: () => void,
+    solutionChanged: (v: string) => void
 }) {
     let [algoData, setAlgoData] = useState("");
     let [algoId, setAlgoId] = useState("");
+    let [langData, _setLangData] = useState(js);
 
     let [defaultAlgorithms, setDefaultAlgorithms] = useState(init_defaultAlgos);
     let [currentTheme, setCurrentTheme] = useState("dark");
@@ -57,11 +62,16 @@ export default function SolutionEditor({problem, solutionHeight}: {
         ], {themeType: "dark"})
     }
 
+    function setSolution(value: string) {
+        setAlgoData(value);
+        onSolutionChanged(value);
+    }
+
     function fetchAlgorithm() {
         if (!algoId || !problem) return;
         getSolution(problem, algoId)
         .then(responseCaseData => {
-            setAlgoData(responseCaseData);
+            setSolution(responseCaseData);
         })
     }
     function toggleTheme() {
@@ -74,7 +84,6 @@ export default function SolutionEditor({problem, solutionHeight}: {
         const nextThemeIndex = (curThemeIndex + 1) % allThemes.length;
         setCurrentTheme(allThemes[nextThemeIndex]);
     }
-    const js = javascript();
 
     useEffect(() => {
         if (!problem) return;
@@ -107,14 +116,20 @@ export default function SolutionEditor({problem, solutionHeight}: {
                 options={defaultAlgorithms.map(n => {return {value: n, label: capitalize(n)}})} 
                 onChange={e => {setAlgoId(e?.value ?? ""); fetchAlgorithm();}}>
             </Select>
+            <button onClick={runner} className={`${buttonStyleClassNames} rounded px-2 border-solid border-2 border-secondary-50 dark:border-secondary-950`}>
+                Run
+            </button>
             <a href={`/docs/${problem}`} className={`${buttonStyleClassNames} rounded px-2 border-solid border-2 border-secondary-50 dark:border-secondary-950 flex flex-row justify-around items-center`}>
                 <Image className="dark:invert" src="/DocScroll.png" alt="Documentation Icon" width={24} height={24}></Image>
             </a>
         </div>
         <div className="flex-grow flex">
-            <ReactCodeMirror style={{height: `${solutionHeight}px`}} lang="javascript" extensions={[themes[currentTheme], syntaxHighlighting(highlights[currentTheme]), js]} value={algoData} onChange={e => setAlgoData(e ?? "")}>
+            <ReactCodeMirror style={{height: `${solutionHeight}px`}} lang="javascript" extensions={[themes[currentTheme], syntaxHighlighting(highlights[currentTheme]), langData]} value={algoData} onChange={e => setSolution(e ?? "")}>
             </ReactCodeMirror>
         </div>
+        {errorMessage ? (<div className="bg-opacity-50 max-h-32 overflow-y-auto border p-1 mt-1 border-solid rounded-md border-danger-500 bg-danger-100 dark:bg-danger-900 text-danger-800 dark:text-danger-200">
+            {errorMessage}
+        </div>) : (<></>)}
     </div>
     );
 }

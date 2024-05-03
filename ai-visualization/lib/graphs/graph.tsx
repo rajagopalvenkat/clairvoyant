@@ -1,5 +1,7 @@
 import { NotImplementedError, ParsingError, RuntimeError } from "../errors/error";
+import { Command, CommandHandler } from "../utils/commands";
 import { genericFromGraphNotation, gridGraphFromNotation, notationFromGenericGraph, notationFromGridGraph } from "./parsing";
+import { renderGenericGraph, renderGridGraph } from "./rendering";
 
 export const ADJACENT_DELTAS = [
     [0, 1], [0, -1], [1, 0], [-1, 0]
@@ -8,6 +10,26 @@ export const ADJACENT_POSITIVE_DELTAS = [
     [0, 1], [1, 0]
 ];
 
+export class GraphCommand extends Command<Graph> {
+    constructor(name: string, cmd_do: (g: Graph) => void, cmd_undo: (g: Graph) => void) {
+        super(name, cmd_do, cmd_undo);
+    }
+}
+
+export class NodeTraverseToggleCommand extends GraphCommand {
+    node: GraphNode;
+    constructor(node: GraphNode) {
+        super("Toggle Traverse", (g: Graph) => {
+            node.data["traversable"] = !node.data["traversable"];
+            g.markDirtyLookup();
+        }, (g: Graph) => {
+            node.data["traversable"] = !node.data["traversable"];
+            g.markDirtyLookup();
+        });
+        this.node = node;
+    }
+}
+
 export abstract class Graph {
     protected _nodeLookup = new Map<string, GraphNode>(); // Used for data/existence access
     protected _edgeLookup = new Map<string, GraphEdge[]>(); // Used to look up connections to/from nodes
@@ -15,6 +37,8 @@ export abstract class Graph {
     protected isDirtyRender: boolean = false;
     protected _startNode: GraphNode | null = null;
     protected _endNode: GraphNode | null = null;
+    protected _render: JSX.Element = <></>;
+    protected _commandHandler: CommandHandler<Graph> = new CommandHandler<Graph>();
     
     markDirtyLookup() {
         this.isDirtyLookup = true;
@@ -45,12 +69,18 @@ export abstract class Graph {
     ensureRenderClean() {
         if (this.isDirtyRender) {
             this.isDirtyRender = false;
-            // Recalculate render dependencies
+            this.recalculateRender();
         }
     }
     ensureClean() {
         this.ensureLookupClean();
         this.ensureRenderClean();        
+    }
+
+    abstract recalculateRender(): void;
+    getRender(): JSX.Element {
+        this.ensureRenderClean();
+        return this._render;
     }
 
     // Node Operations
@@ -63,7 +93,7 @@ export abstract class Graph {
     public removeNode(nodeId: string): boolean;
     public removeNode(val: GraphNode | string): boolean {
         if (val instanceof GraphNode) {val = val.id;}
-        if (!(val in this._nodeLookup)) return false;
+        if (!this._nodeLookup.has(val)) return false;
         this.clearAllEdgesWith(val);
         this._nodeLookup.delete(val);
         this.markDirtyRender();
@@ -74,6 +104,26 @@ export abstract class Graph {
     set startNode(node) {this._startNode = node; this.markDirtyRender();}
     get endNode() {return this._endNode}
     set endNode(node) {this._endNode = node; this.markDirtyRender();}
+
+    // Command handling
+    get commandHandler() {return this._commandHandler;}
+    
+    visitNode(node: GraphNode) {
+        this.setNodeState(node, "visited");
+    }
+    unvisitNode(node: GraphNode) {
+        this.setNodeState(node, undefined);
+    }
+    expandNode(node: GraphNode) {
+        this.setNodeState(node, "expanded");
+    }
+    unexpandNode(node: GraphNode) {
+        this.setNodeState(node, "visited");
+    }
+    setNodeState(node: GraphNode, state: any) {
+        node.data["state"] = state;
+        this.markDirtyRender();
+    }
 
     // Edge operations
     public clearAllEdgesWith(nodeId: string) {
@@ -141,21 +191,25 @@ export abstract class Graph {
     /// Generates pairs node-weight, useful for edge-cost-sensitive solutions
     public *getAdjacentData(node: GraphNode): Generator<[GraphNode, number]> {
         this.ensureLookupClean();
-        if (!(node.id in this._edgeLookup)) return;
-        for (let edge of this._edgeLookup.get(node.id) || []) {
+        console.log(this._edgeLookup.keys())
+        if (!this._edgeLookup.has(node.id)) return;
+        let adjEdges = this._edgeLookup.get(node.id) || [];
+        console.log("Adjacent edges: ", adjEdges);
+        for (let edge of adjEdges) {
+            console.log("Edge: ", edge, "Traversable: ", edge.traversable());
             if (!edge.traversable()) continue;
             yield [edge.target, edge.weight];
         }
     }
 
     public getNodeById(id: string): GraphNode | undefined {
-        if (!(this._nodeLookup.has(id))) return undefined;
+        if (!this._nodeLookup.has(id)) return undefined;
         return this._nodeLookup.get(id);
     }
 
     public getNextIdentifier() {
         let potentialIdNum = Object.keys(this._nodeLookup).length;
-        while (String(potentialIdNum) in this._nodeLookup) {potentialIdNum++;}
+        while (this._nodeLookup.has(String(potentialIdNum))) {potentialIdNum++;}
         return String(potentialIdNum);
     }
 
@@ -213,6 +267,10 @@ export class GridGraph extends Graph {
     stringify(): string {
         return notationFromGridGraph(this);
     }
+
+    recalculateRender(): void {
+        this._render = renderGridGraph(this);
+    }
 }
 
 export class GenericGraph extends Graph {
@@ -226,6 +284,10 @@ export class GenericGraph extends Graph {
 
     stringify(): string {
         return notationFromGenericGraph(this);
+    }
+
+    recalculateRender(): void {
+        this._render = renderGenericGraph(this);
     }
 }
 

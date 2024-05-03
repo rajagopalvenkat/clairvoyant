@@ -42,7 +42,11 @@ const config: Config = {
         800: '#690a00',
         900: '#3d0600',
         950: '#210300'
-      }/*,
+      },
+      'code-null': '#888888',
+      'code-boolean': '#888888',
+      'code-number': '#888888',
+      'code-string': '#888888',/*,
       'primary-bg': '#d5dff0',
       'secondary-bg': '#c5d8f0',
       'primary-dark': '#bfc7e3',

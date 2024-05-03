@@ -149,11 +149,11 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
                 const adjNode = result.ensureGetNodeByCoords(j + dx, i + dy);
                 const newEdge = new GraphEdgeSimple(thisNode, adjNode, true);
                 result.addEdge(newEdge);
-                console.log(`Added edge: ${newEdge.source.id}-${newEdge.target.id}`);
+                //console.log(`Added edge: ${newEdge.source.id}-${newEdge.target.id}`);
             }
         }
     }
-    console.log(result.getAllEdges());
+    //console.log(result.getAllEdges());
     for (let i = y + 1; i < lines.length; i++) {
         let line = lines[i].trim();
         let parsedCmd = parseCommand(line, i);
