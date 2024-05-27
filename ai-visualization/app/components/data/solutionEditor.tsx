@@ -1,7 +1,7 @@
 import { getSolution, getSolutions } from "@/lib/api/problems";
 import { buttonStyleClassNames } from "@/lib/statics/styleConstants";
-import { capitalize } from "@/lib/strings/pretty";
-import { useEffect, useState } from "react";
+import { capitalize, formatPrettyFile } from "@/lib/strings/pretty";
+import { useCallback, useEffect, useState } from "react";
 import Select from "react-select";
 import ReactCodeMirror, { EditorView, Extension } from "@uiw/react-codemirror";
 import {HighlightStyle, syntaxHighlighting} from "@codemirror/language"
@@ -15,12 +15,12 @@ const init_defaultAlgos: string[] = []
 
 const js = javascript();
 
-export default function SolutionEditor({problem, solutionHeight, errorMessage, runner, solutionChanged: onSolutionChanged}: {
+export default function SolutionEditor({problem, solutionHeight, errorMessage, runner, onSolutionChanged: onSolutionChanged}: {
     problem: string,
     solutionHeight: number,
     errorMessage: string,
     runner: () => void,
-    solutionChanged: (v: string) => void
+    onSolutionChanged: (v: string) => void
 }) {
     let [algoData, setAlgoData] = useState("");
     let [algoId, setAlgoId] = useState("");
@@ -62,18 +62,18 @@ export default function SolutionEditor({problem, solutionHeight, errorMessage, r
         ], {themeType: "dark"})
     }
 
-    function setSolution(value: string) {
+    const setSolution = useCallback((value: string) => {
         setAlgoData(value);
         onSolutionChanged(value);
-    }
+    }, [onSolutionChanged])
 
-    function fetchAlgorithm() {
-        if (!algoId || !problem) return;
-        getSolution(problem, algoId)
+    const fetchAlgorithm = useCallback((forProblem: string, forAlgoId: string) => {
+        getSolution(forProblem, forAlgoId)
         .then(responseCaseData => {
             setSolution(responseCaseData);
         })
-    }
+    }, [setSolution])
+
     function toggleTheme() {
         const allThemes = Object.keys(themes);
         const curThemeIndex = allThemes.indexOf(currentTheme);
@@ -113,8 +113,8 @@ export default function SolutionEditor({problem, solutionHeight, errorMessage, r
                     control: (state) => {return `${buttonStyleClassNames} rounded pl-2 border-solid border-2 border-secondary-50 dark:border-secondary-950`}, 
                     option: (state) => {return `${buttonStyleClassNames} p-1`}
                 }}
-                options={defaultAlgorithms.map(n => {return {value: n, label: capitalize(n)}})} 
-                onChange={e => {setAlgoId(e?.value ?? ""); fetchAlgorithm();}}>
+                options={defaultAlgorithms.map(n => {return {value: n, label: formatPrettyFile(n)}})} 
+                onChange={e => {setAlgoId(e?.value ?? ""); fetchAlgorithm(problem, e?.value ?? "");}}>
             </Select>
             <button onClick={runner} className={`${buttonStyleClassNames} rounded px-2 border-solid border-2 border-secondary-50 dark:border-secondary-950`}>
                 Run

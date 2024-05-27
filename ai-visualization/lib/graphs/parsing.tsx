@@ -129,7 +129,8 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
     // parsing, to include edges and set default styles
     for (let i = 1; i < y + 1; i++) {
         let line = lines[i].trim();
-        let vals = line.split(/\s+/).map(parseInt);
+        let segments = line.split(/\s+/);
+        let vals = segments.map(n => parseInt(n.trim()));
         if (vals.length != x) throw new ParsingError(`Invalid grid row, expected ${x} numeric values, got ${vals.length}`, i, 0, "1 ".repeat(x).trimEnd());
         for (let j = 0; j < x; j++) {
             let node = result.ensureGetNodeByCoords(j, i - 1);
@@ -138,6 +139,16 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
             node.style = val == 0 ? defaultUntraversibleStyle : defaultTraversibleStyle;
         }
     }
+    
+    let debugData: Record<string, any> = {};
+    for (let i = 0; i < y; i++) {
+        for (let j = 0; j < x; j++) {
+            let node = result.ensureGetNodeByCoords(j, i);
+            debugData[node.id] = node.data;
+        }
+    }
+    console.log(debugData);
+
     // Construction of edges
     for (let i = 0; i < y; i++) {
         for (let j = 0; j < x; j++) {
@@ -146,7 +157,8 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
             for (let [dx,dy] of ADJACENT_POSITIVE_DELTAS) {
                 let adjX = j + dx; let adjY = i + dy;
                 if (adjX < 0 || adjX >= x || adjY < 0 || adjY >= y) continue;
-                const adjNode = result.ensureGetNodeByCoords(j + dx, i + dy);
+                const adjNode = result.ensureGetNodeByCoords(adjX, adjY);
+                if (!adjNode.data["traversable"]) continue;
                 const newEdge = new GraphEdgeSimple(thisNode, adjNode, true);
                 result.addEdge(newEdge);
                 //console.log(`Added edge: ${newEdge.source.id}-${newEdge.target.id}`);

@@ -1,7 +1,7 @@
 import { NotImplementedError, ParsingError, RuntimeError } from "../errors/error";
+import { colorWithAlpha } from "../utils/colors";
 import { Command, CommandHandler } from "../utils/commands";
 import { genericFromGraphNotation, gridGraphFromNotation, notationFromGenericGraph, notationFromGridGraph } from "./parsing";
-import { renderGenericGraph, renderGridGraph } from "./rendering";
 
 export const ADJACENT_DELTAS = [
     [0, 1], [0, -1], [1, 0], [-1, 0]
@@ -37,9 +37,14 @@ export abstract class Graph {
     protected isDirtyRender: boolean = false;
     protected _startNode: GraphNode | null = null;
     protected _endNode: GraphNode | null = null;
-    protected _render: JSX.Element = <></>;
     protected _commandHandler: CommandHandler<Graph> = new CommandHandler<Graph>();
+    protected _searchResult: string = "";
     
+    get isDirty() {return this.isDirtyLookup || this.isDirtyRender;}
+    get dirtyRender() {return this.isDirtyRender}
+    get dirtyLookup() {return this.isDirtyLookup}
+    get searchResult() {return this._searchResult}
+
     markDirtyLookup() {
         this.isDirtyLookup = true;
     }
@@ -49,6 +54,9 @@ export abstract class Graph {
     markDirtyAll() {
         this.markDirtyLookup();
         this.markDirtyRender();
+    }
+    markCleanRender() {
+        this.isDirtyRender = false;
     }
     ensureLookupClean() {
         if (this.isDirtyLookup) {
@@ -65,22 +73,6 @@ export abstract class Graph {
                 this.addEdge(edge);
             }
         }
-    }
-    ensureRenderClean() {
-        if (this.isDirtyRender) {
-            this.isDirtyRender = false;
-            this.recalculateRender();
-        }
-    }
-    ensureClean() {
-        this.ensureLookupClean();
-        this.ensureRenderClean();        
-    }
-
-    abstract recalculateRender(): void;
-    getRender(): JSX.Element {
-        this.ensureRenderClean();
-        return this._render;
     }
 
     // Node Operations
@@ -112,7 +104,7 @@ export abstract class Graph {
         this.setNodeState(node, "visited");
     }
     unvisitNode(node: GraphNode) {
-        this.setNodeState(node, undefined);
+        this.setNodeState(node, "");
     }
     expandNode(node: GraphNode) {
         this.setNodeState(node, "expanded");
@@ -120,9 +112,28 @@ export abstract class Graph {
     unexpandNode(node: GraphNode) {
         this.setNodeState(node, "visited");
     }
+    complete() {
+        this._searchResult = "success"
+    }
+    uncomplete() {
+        this._searchResult = ""
+    }
+    fail() {
+        this._searchResult = "failure"
+    }
+    unfail() {
+        this._searchResult = ""
+    }
     setNodeState(node: GraphNode, state: any) {
         node.data["state"] = state;
         this.markDirtyRender();
+    }
+
+    public resetStepData() {
+        for (let node of this.getAllNodes()) {
+            this.setNodeState(node, "");
+        }
+        this._searchResult = "";
     }
 
     // Edge operations
@@ -175,9 +186,17 @@ export abstract class Graph {
     public getAllEdges(): GraphEdge[] {
         let edges: GraphEdge[] = [];
         for (let nodeEdgeList of this._edgeLookup.values()) {
-            edges.push(...nodeEdgeList);
+            edges.push(...nodeEdgeList.filter(e => !e.isRef));
         }
         return edges;
+    }
+
+    public getAllNodes(): GraphNode[] {
+        let nodes: GraphNode[] = []
+        for (let node of this._nodeLookup.values()) {
+            nodes.push(node);
+        }
+        return nodes;
     }
 
     // Useful functions for algorithms
@@ -267,10 +286,6 @@ export class GridGraph extends Graph {
     stringify(): string {
         return notationFromGridGraph(this);
     }
-
-    recalculateRender(): void {
-        this._render = renderGridGraph(this);
-    }
 }
 
 export class GenericGraph extends Graph {
@@ -284,10 +299,6 @@ export class GenericGraph extends Graph {
 
     stringify(): string {
         return notationFromGenericGraph(this);
-    }
-
-    recalculateRender(): void {
-        this._render = renderGenericGraph(this);
     }
 }
 
@@ -315,6 +326,12 @@ class ReverseGraphEdgeRef implements GraphEdge {
     }
     traversable() {
         return this.ref.isBidirectional;
+    }
+    renderingAttributes(): Record<string, any> {
+        return this.ref.renderingAttributes();
+    }
+    getId(): string {
+        return `${this.ref.source.id}_${this.ref.target.id}`;
     }
 }
 
@@ -371,9 +388,18 @@ export class GraphEdgeSimple implements GraphEdge {
     traversable(): boolean {
         return true;
     }
+
+    renderingAttributes(): Record<string, any> {
+        return {};
+    }
+
+    getId(): string {
+        return `${this.source.id}_${this.target.id}`;
+    }
 }
 
 export interface GraphEdge {
+    getId(): string;
     get source(): GraphNode
     set source(node: GraphNode)
     get target(): GraphNode
@@ -391,8 +417,20 @@ export interface GraphEdge {
 
     reverse(): GraphEdge
     traversable(): boolean
+    renderingAttributes(): Record<string, any>;
 }
 
+export const GRIDGRAPH_SCALE_FACTOR = 50;
+function getColorByState(state: string | undefined): string {
+    switch (state) {
+        case "visited":
+            return "#ffff00";
+        case "expanded":
+            return "#66ff66";
+        default:
+            return "#999999";
+    }
+}
 export class GraphNode {
     id: string;
     x: number;
@@ -410,6 +448,39 @@ export class GraphNode {
     }
 
     get graph() {return this._graph;}
+
+    renderingAttributes(): Record<string, any> {
+        let result : Record<string, any> = {};
+        let c;
+        switch (this._graph.searchResult) {
+            case "success":
+                c = "#3333ff";
+                break;
+            case "failure":
+                c = "#ff3333";
+                break;
+            default:
+                c = getColorByState(this.data.state);
+                break;      
+        }        
+        if (this._graph instanceof GridGraph) {
+            result.x = this.x * GRIDGRAPH_SCALE_FACTOR;
+            result.y = this.y * GRIDGRAPH_SCALE_FACTOR;
+            if (this.data["traversable"] == false) {
+                c = colorWithAlpha(c, 0x80);
+            }
+        }
+        if (this._graph.startNode?.id == this.id) {
+            result.shape = "diamond";
+            result.size = 18;
+        }
+        if (this._graph.endNode?.id == this.id) {
+            result.shape = "star";
+            result.size = 18;
+        }
+        if (c) result.color = c; 
+        return result;
+    }
 }
 
 export interface GraphNodeStyle {

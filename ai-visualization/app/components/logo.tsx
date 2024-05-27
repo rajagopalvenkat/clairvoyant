@@ -1,12 +1,11 @@
 import { APP_NAME } from "@/lib/statics/appConstants";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Logo() {
     return (
         <Link href="/">
-            <div>
-                <span className="text-2xl text-accent dark:text-accent-200">{APP_NAME}</span>
-            </div>
+            <Image src="/ClairvoyantLogoProgrammerArt.png" alt={APP_NAME} width={200} height={50} />
         </Link>
     )
 }

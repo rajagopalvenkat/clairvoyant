@@ -45,12 +45,14 @@ export default function GraphSearchPage() {
             return {success: false, fault: "solver", message: error.message};
         }
     };
+
     function runAlgo() {
         let result = updateSolutionSteps(solutionData, graph);
         if (result.success) {
             toast.success(result.message);
             setGraphErrorMessage("");
             setAlgoErrorMessage("");
+            resetStepData();
             return;
         };
     
@@ -75,6 +77,7 @@ export default function GraphSearchPage() {
             return;
         }
     },[]);
+
     const onSolutionDataChanged = useCallback((rawData: string) => {
         setSolutionData(rawData);
         setAlgoErrorMessage("");
@@ -95,6 +98,12 @@ export default function GraphSearchPage() {
         else if (step.actType === "expand") {
             graph.expandNode(step.cell!);
         }
+        else if (step.actType === "success") {
+            graph.complete();
+        }
+        else if (step.actType === "failure") {
+            graph.fail();
+        }
         setDebugData(step.debugValue);
         setGraphStepIndex(stepIndex + 1);
         return stepIndex + 1;
@@ -114,25 +123,18 @@ export default function GraphSearchPage() {
         else if (step.actType === "expand") {
             graph.unexpandNode(step.cell!);
         }
+        else if (step.actType === "success") {
+            graph.uncomplete();
+        }
+        else if (step.actType === "failure") {
+            graph.unfail();
+        }
         setDebugData(stepIndex >= 2 ? steps[stepIndex - 2].debugValue : null);
         setGraphStepIndex(stepIndex - 1);
         return stepIndex - 1;
     },[graph]);
     
-    const onResetRequested = useCallback(() => {
-        setGraphStepIndex(0);
-        try {
-            let graph = Graph.parseGraph(graphData);
-            setGraph(graph);
-            setGraphErrorMessage("");
-        }
-        catch (err) {
-            let error = ensureError(err);
-            setGraphErrorMessage(error.message);
-            toast.error(`There was an error while reloading the graph: ${error.message}`)
-        }
-    },[graphData]);
-    const onStepRequested = useCallback((delta: number) => {
+    const onStepRequested = useCallback((newStep: number) => {
         if (!graph || !graph.startNode || !graph.endNode) {
             toast.error("Invalid graph. Please make sure the graph is valid.");
             return;
@@ -143,41 +145,24 @@ export default function GraphSearchPage() {
         }
 
         let stepIndex = graphStepIndex;
-        if (delta < 0) {
-            if (stepIndex <= 0) {
-                toast.error("No more steps to undo!");
-                return;
-            }
-            delta = -delta;
-            for (let i = 0; i < delta; i++) {
-                stepIndex = handleBackStep(steps, stepIndex);
-            }
-        } else {
-            if (stepIndex >= graphSteps.length) {
-                toast.error("Last step reached!");
-                return;
-            }
-            for (let i = 0; i < delta; i++) {
-                stepIndex = handleStep(steps, stepIndex);
-            }
+        let maxCnt = 100;
+        while (newStep > stepIndex) {
+            stepIndex = handleStep(steps, stepIndex);
+            if (maxCnt-- < 0) break;
+        }
+        while (newStep < stepIndex) {
+            stepIndex = handleBackStep(steps, stepIndex);
+            if (maxCnt-- < 0) break;
         }
     },[graph, graphStepIndex, graphSteps, handleBackStep, handleStep]);
-    const onSolveRequested = useCallback(() => {
-        if (!graph || !graph.startNode || !graph.endNode) {
-            toast.error("Invalid graph. Please make sure the graph is valid.");
-            return;
-        }
-        let steps = graphSteps;
-        if (!graphSteps) {
-            toast.error("No steps to step through. Please run the solver first.");
-        }
-        let stepIndex = graphStepIndex;
-        while (stepIndex < steps.length) {
-            handleStep(steps, stepIndex);
-        }
-        setGraphStepIndex(stepIndex);
-    },[graph, graphStepIndex, graphSteps, handleStep]);
     
+    function resetStepData() {
+        setGraphStepIndex(0);
+        setDebugData(null);
+        if (graph)
+            graph.resetStepData();
+    }
+
     // command execution
     let executed = graph?.commandHandler.executeToCurrent(graph);
     if (executed && executed.length > 0) {
@@ -191,7 +176,7 @@ export default function GraphSearchPage() {
             <Header selectedPage="graphsearch"></Header>
             <div className="flex flex-row items-stretch flex-grow">
                 <div className="flex flex-col justify-stretch" style={{"width": `${leftWidth}px`}}>
-                    <SolutionEditor solutionHeight={solHeight} problem={"graph-search"} solutionChanged={onSolutionDataChanged} runner={runAlgo} errorMessage={algoErrorMessage}></SolutionEditor>
+                    <SolutionEditor solutionHeight={solHeight} problem={"graph-search"} onSolutionChanged={onSolutionDataChanged} runner={runAlgo} errorMessage={algoErrorMessage}></SolutionEditor>
                     <HDivider onWidthChangeRequest={function (v: number): void {
                         setSolHeight(solHeight + v);
                     } }></HDivider>
@@ -201,8 +186,8 @@ export default function GraphSearchPage() {
                     setLeftWidth(leftWidth + v);
                 })}></VDivider>
                 <div className="p-3 m-2 rounded-md border-accent dark:border-accent-200 border-solid border flex-grow">
-                    <GraphView graph={graph} resetHandler={onResetRequested} stepHandler={onStepRequested} solveHandler={onSolveRequested}
-                    stepIndex={graphStepIndex} totalSteps={graphSteps.length} logData={debugData}></GraphView>
+                    <GraphView graph={graph} stepHandler={onStepRequested}
+                    totalSteps={graphSteps.length} logData={debugData} stepIndex={graphStepIndex}></GraphView>
                 </div>
             </div>
         </div>

@@ -1,8 +1,7 @@
 import { getCase, getCases } from "@/lib/api/problems";
-import { iteratorToArray } from "@/lib/collections/arrays";
 import { API_URL } from "@/lib/statics/appConstants";
 import { buttonStyleClassNames } from "@/lib/statics/styleConstants";
-import { capitalize } from "@/lib/strings/pretty";
+import { capitalize, formatPrettyFile } from "@/lib/strings/pretty";
 import { useCallback, useEffect, useState } from "react";
 import Select, { ClassNamesConfig } from "react-select";
 import ClipboardButton from "../clipboardButton";
@@ -46,7 +45,7 @@ export default function CaseEditor({problem, errorMessage, caseData, onCaseDataC
             <Select unstyled className="flex-grow" classNames={{
                 control: (state) => {return `${buttonStyleClassNames} rounded pl-2 border-solid border-2 border-secondary-50 dark:border-secondary-950`}, 
                 option: (state) => {return `${buttonStyleClassNames} p-1`}}}
-                options={defaultCases.map(n => {return {value: n, label: capitalize(n)}})}   
+                options={defaultCases.map(n => {return {value: n, label: formatPrettyFile(n)}})}   
                 onChange={e => {setCaseId(e?.value ?? ""); fetchCaseData(problem, e?.value ?? "");}}>
             </Select>
             <ClipboardButton textToCopy={caseData} className={`${buttonStyleClassNames} border-2 border-solid border-secondary-50 dark:border-secondary-950 min-w-8 ml-1 rounded px-2`}></ClipboardButton>

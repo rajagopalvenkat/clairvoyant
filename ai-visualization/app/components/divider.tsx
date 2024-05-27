@@ -35,7 +35,7 @@ export function VDivider({onWidthChangeRequest}: {
     }, [draggingX, mouseX, onWidthChangeRequest]);
 
     return (
-        <button className="h-100 ml-2 border border-secondary-50 dark:border-secondary-950 bg-secondary-100 dark:bg-secondary-900" 
+        <button className="h-100 ml-2 px-1 border border-secondary-50 dark:border-secondary-950 bg-secondary-100 dark:bg-secondary-900" 
             onMouseDown={startDragging}>
             ||
         </button>

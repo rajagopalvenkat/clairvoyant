@@ -3,7 +3,7 @@
 import GraphSearchPage from "@/app/problems/graph-search/page"
 import React from "react"
 
-export const APP_NAME = "AI Visualizer"
+export const APP_NAME = "Clairvoyant"
 export const API_URL = "http://localhost:5000/api/v1"
 
 export interface Problem {
