@@ -92,17 +92,22 @@ export default function GraphSearchPage() {
             return steps.length;
         }
         let step = steps[stepIndex];
-        if (step.actType === "visit") {
-            graph.visitNode(step.cell!);
-        }
-        else if (step.actType === "expand") {
-            graph.expandNode(step.cell!);
-        }
-        else if (step.actType === "success") {
-            graph.complete();
-        }
-        else if (step.actType === "failure") {
-            graph.fail();
+        switch (step.actType) {
+            case "visit":
+                graph.visitNode(step.cell!);
+                break;
+            case "expand":
+                graph.expandNode(step.cell!);
+                break;
+            case "success":
+                graph.complete();
+                break;
+            case "failure":
+                graph.fail();
+                break;
+            default:
+                console.error("Unknown step type: ", step.actType);
+                break;
         }
         setDebugData(step.debugValue);
         setGraphStepIndex(stepIndex + 1);
@@ -117,17 +122,22 @@ export default function GraphSearchPage() {
             return 0;
         }
         let step = steps[stepIndex - 1];
-        if (step.actType === "visit") {
-            graph.unvisitNode(step.cell!);
-        }
-        else if (step.actType === "expand") {
-            graph.unexpandNode(step.cell!);
-        }
-        else if (step.actType === "success") {
-            graph.uncomplete();
-        }
-        else if (step.actType === "failure") {
-            graph.unfail();
+        switch (step.actType) {
+            case "visit":
+                graph.unvisitNode(step.cell!);
+                break;
+            case "expand":
+                graph.unexpandNode(step.cell!);
+                break;
+            case "success":
+                graph.uncomplete();
+                break;
+            case "failure":
+                graph.unfail();
+                break;
+            default:
+                console.error("Unknown step type: ", step.actType);
+                break;
         }
         setDebugData(stepIndex >= 2 ? steps[stepIndex - 2].debugValue : null);
         setGraphStepIndex(stepIndex - 1);
