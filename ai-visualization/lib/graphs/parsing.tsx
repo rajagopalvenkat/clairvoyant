@@ -77,6 +77,7 @@ export function genericFromGraphNotation(lines: string[]): GenericGraph {
         let parsedCmd = parseCommand(line, i);
         if (parsedCmd === undefined) continue;
         let {cmd, args, opts, data} = parsedCmd;
+        console.log(`Parsed command: ${cmd} with args ${args} and opts ${opts}`)
         switch (cmd) {
             case "NODE":
                 ensureArgsLength(args, 1, "node setup", i, cmd);
@@ -91,19 +92,21 @@ export function genericFromGraphNotation(lines: string[]): GenericGraph {
                 let bidirectional = opts.includes("-b") || opts.includes("--bidirectional");
                 let edge = new GraphEdgeSimple(nodeA, nodeB, bidirectional);
                 [edge.data, edge.style] = splitDataAndStyle<GraphEdgeStyle>(data);
+                result.addEdge(edge);
                 break;
             case "START":
                 ensureArgsLength(args, 1, "start node indication", i, cmd);
                 let startNode = ensureGetNodeById(result, args[0], "start node indication", line, i);
-                result.startNode == startNode;
+                result.startNode = startNode;
                 break;
             case "GOAL":
                 ensureArgsLength(args, 1, "goal node indication", i, cmd);
                 let endNode = ensureGetNodeById(result, args[0], "goal node indication", line, i);
-                result.endNode == endNode;
+                result.endNode = endNode;
                 break;
         }
     }
+    console.log(result);
     return result;
 }
 

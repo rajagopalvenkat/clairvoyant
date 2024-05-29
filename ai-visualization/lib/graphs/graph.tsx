@@ -210,12 +210,12 @@ export abstract class Graph {
     /// Generates pairs node-weight, useful for edge-cost-sensitive solutions
     public *getAdjacentData(node: GraphNode): Generator<[GraphNode, number]> {
         this.ensureLookupClean();
-        console.log(this._edgeLookup.keys())
+        //console.log(this._edgeLookup.keys())
         if (!this._edgeLookup.has(node.id)) return;
         let adjEdges = this._edgeLookup.get(node.id) || [];
-        console.log("Adjacent edges: ", adjEdges);
+        //console.log("Adjacent edges: ", adjEdges);
         for (let edge of adjEdges) {
-            console.log("Edge: ", edge, "Traversable: ", edge.traversable());
+            //console.log("Edge: ", edge, "Traversable: ", edge.traversable());
             if (!edge.traversable()) continue;
             yield [edge.target, edge.weight];
         }
@@ -420,17 +420,6 @@ export interface GraphEdge {
     renderingAttributes(): Record<string, any>;
 }
 
-export const GRIDGRAPH_SCALE_FACTOR = 50;
-function getColorByState(state: string | undefined): string {
-    switch (state) {
-        case "visited":
-            return "#ffff00";
-        case "expanded":
-            return "#66ff66";
-        default:
-            return "#999999";
-    }
-}
 export class GraphNode {
     id: string;
     x: number;
@@ -448,39 +437,6 @@ export class GraphNode {
     }
 
     get graph() {return this._graph;}
-
-    renderingAttributes(): Record<string, any> {
-        let result : Record<string, any> = {};
-        let c;
-        switch (this._graph.searchResult) {
-            case "success":
-                c = "#3333ff";
-                break;
-            case "failure":
-                c = "#ff3333";
-                break;
-            default:
-                c = getColorByState(this.data.state);
-                break;      
-        }        
-        if (this._graph instanceof GridGraph) {
-            result.x = this.x * GRIDGRAPH_SCALE_FACTOR;
-            result.y = this.y * GRIDGRAPH_SCALE_FACTOR;
-            if (this.data["traversable"] == false) {
-                c = colorWithAlpha(c, 0x80);
-            }
-        }
-        if (this._graph.startNode?.id == this.id) {
-            result.shape = "diamond";
-            result.size = 18;
-        }
-        if (this._graph.endNode?.id == this.id) {
-            result.shape = "star";
-            result.size = 18;
-        }
-        if (c) result.color = c; 
-        return result;
-    }
 }
 
 export interface GraphNodeStyle {

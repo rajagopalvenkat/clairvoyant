@@ -1,37 +1,37 @@
-import { Graph, GridGraph, GenericGraph, GRIDGRAPH_SCALE_FACTOR } from "@/lib/graphs/graph"
+import { Graph, GridGraph, GenericGraph, GraphNode } from "@/lib/graphs/graph"
 import { renderValue } from "@/lib/strings/pretty"
 import { useState } from "react";
 import VisGraph, { GraphData, Options as VisGraphOptions } from "react-vis-graph-wrapper"
 import Stepper from "./stepper";
+import { Font } from "vis-network";
+import { colorWithAlpha } from "@/lib/utils/colors";
 
+const edgeScaleFactor = 2;
 function getVisOptions(graph: Graph | null = null): VisGraphOptions {
-    let base = {
+    let fontColor = "#7777ff";
+    let fontStrokeColor = "black";
+    let fontData : Font = {
+        size: 14,
+        color: fontColor,
+        strokeWidth: 1,
+        strokeColor: fontStrokeColor,
+    };
+
+    let base: VisGraphOptions = {
         edges: {
             labelHighlightBold: true,
-            font: {
-                size: 20
-            },
+            font: fontData,
             color: "white"
         },
         nodes: {
-            font: '12px roboto black',
+            font: fontData,
             scaling: {
                 label: true
-            },
-            shape: 'circle'
-        },
-        physics: {
-            barnesHut: {
-                gravitationalConstant: -500,
-                springConstant: 0.006,
-                springLength: 35,
-                centralGravity: 0.4,
             }
         },
         height: "100%",
     }
     if (graph instanceof GridGraph) {
-        base.nodes.shape = 'box';
         base.physics = {
             barnesHut: {
                 gravitationalConstant: 0,
@@ -41,8 +41,74 @@ function getVisOptions(graph: Graph | null = null): VisGraphOptions {
             }
         }
     }
+    if (graph instanceof GenericGraph) {
+        base.edges!.smooth = {
+            enabled: true,
+            type: "continuous",
+            roundness: 0.5
+        }
+        base.physics = {
+            barnesHut: {
+                gravitationalConstant: -2000,
+                springConstant: 0.006,
+                springLength: 60,
+                centralGravity: 0.4,
+            }
+        }
+    }
     return base;
 };
+
+export const GRIDGRAPH_SCALE_FACTOR = 50;
+function getColorByState(state: string | undefined): string {
+    switch (state) {
+        case "visited":
+            return "#ffff00";
+        case "expanded":
+            return "#66ff66";
+        default:
+            return "#999999";
+    }
+}
+
+function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): Record<string, any> {
+    let result : Record<string, any> = {};
+    let c;
+    switch (node.graph.searchResult) {
+        case "success":
+            c = "#3333ff";
+            break;
+        case "failure":
+            c = "#ff3333";
+            break;
+        default:
+            c = getColorByState(node.data.state);
+            break;      
+    } 
+
+    if (node.graph instanceof GridGraph) {
+        result.shape = "box";
+        result.x = node.x * GRIDGRAPH_SCALE_FACTOR;
+        result.y = node.y * GRIDGRAPH_SCALE_FACTOR;
+        if (node.data["traversable"] == false) {
+            c = colorWithAlpha(c, 0x80);
+        }
+    } else {
+        result.shape = "dot";
+        result.size = 8;
+    }
+
+    if (node.graph.startNode?.id == node.id) {
+        result.shape = "diamond";
+        result.size = 15;
+    }
+    if (node.graph.endNode?.id == node.id) {
+        result.shape = "star";
+        result.size = 15;
+    }
+    if (c) result.color = c; 
+    return result;
+}
 
 export default function GraphView({graph, logData, stepIndex, totalSteps, stepHandler}: {
     graph: Graph | null,
@@ -55,20 +121,21 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, stepHa
         return `${stepIndex}/${totalSteps}`
     }
 
+    const visGraphOptions = getVisOptions(graph);
+
     //let [visGraphData, setVisGraphData] = useState({nodes: [], edges: []} as GraphData);
     let visGraphData: GraphData = {nodes: [], edges: []}
     if (graph) {
         visGraphData = {
             nodes: graph.getAllNodes().map((node, _idx) => {
-                return {id: node.id, label: node.id, ...node.renderingAttributes()}
+                return {id: node.id, label: node.id, ...getNodeAttributes(node, visGraphOptions)}
             }),
             edges: graph.getAllEdges().map((edge, index) => {
-                return {id: edge.getId(), from: edge.source.id, to: edge.target.id, value: edge.weight, arrows: (edge.isBidirectional ? '' : 'to'), ...edge.renderingAttributes()}
+                return {from: edge.source.id, to: edge.target.id, width: edge.weight * edgeScaleFactor, arrows: (edge.isBidirectional ? '' : 'to'), ...edge.renderingAttributes()}
             })
         };
     }
     //console.log(visGraphData);
-    const visGraphOptions = getVisOptions(graph);
     const visGraphEvents = {select: function(event: any) {
         var { nodes, edges } = event;
     }}
