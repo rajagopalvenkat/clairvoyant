@@ -1,6 +1,7 @@
 import { NotImplementedError, ParsingError, RuntimeError } from "../errors/error";
 import { Command, CommandHandler } from "../utils/commands";
 import { ItemProperty, canSetProps } from "../utils/properties";
+import { Mathlib } from "../utils/math";
 
 export const DIAGONAL_WEIGHT_DISABLED = -1;
 export const DIAGONAL_WEIGHT_CHEBYSHEV = 1;
@@ -358,7 +359,7 @@ function getEdgeProperties(edge: GraphEdge): ItemProperty[] {
     ]
 }
 function setEdgeProperty(edge: GraphEdge, name: string, value: any) {
-    let setAnalysis = canSetProps(getEdgeProperties(edge), [{name, value}]);
+    let setAnalysis = canSetProps(getEdgeProperties(edge), {[name]: value});
     if (!setAnalysis.success) throw new Error(setAnalysis.errors.join("\n"));
     if (name == "weight") {
         edge.weight = value;
@@ -468,7 +469,7 @@ export class GraphEdgeSimple implements GraphEdge {
     }
     get isBidirectional() {return this._isBidirectional;}
     set isBidirectional(bidirectional: boolean) {
-        this.isBidirectional = bidirectional;
+        this._isBidirectional = bidirectional;
         this._source.graph.markDirtyRender();
     }
 
@@ -555,6 +556,7 @@ export class GraphNode implements EditableGraphComponent {
             {name: "label", type: "string", value: this.data["label"] ?? this.id},
             {name: "is_start", type: "boolean", value: this._graph.startNode?.id == this.id, trigger: true},
             {name: "is_goal", type: "boolean", value: this._graph.endNode?.id == this.id, trigger: true},
+            {name: "h", type: "number", value: this.heuristic}
         ];
         if (this._graph instanceof GridGraph) {
             result.push({name: "x", type: "number", value: this.x, fixed: true});
@@ -568,6 +570,7 @@ export class GraphNode implements EditableGraphComponent {
         if (name == "is_start") return this._graph.startNode?.id == this.id;
         if (name == "is_goal") return this._graph.endNode?.id == this.id;
         if (name == "label") return this.data["label"] ?? this.id;
+        if (name == "h") return this.heuristic;
         if (this._graph instanceof GridGraph) {
             if (name == "x") return this.x;
             if (name == "y") return this.y;
@@ -576,7 +579,7 @@ export class GraphNode implements EditableGraphComponent {
         throw new NotImplementedError(`Property ${name} is not implemented for GraphNode`);
     }
     setProp(name: string, value: any): void {
-        let setAnalysis = canSetProps(this.properties, [{name: value}]);
+        let setAnalysis = canSetProps(this.properties, {[name]: value});
         if (!setAnalysis.success) throw new Error(setAnalysis.errors.join("\n"));
         
         if (name == "label") {
@@ -589,6 +592,9 @@ export class GraphNode implements EditableGraphComponent {
         else if (name == "is_goal") {
             // Initial checks ensure that this is set to true
             this._graph.endNode = this;
+        }
+        else if (name == "h") {
+            this.data["h"] = value;
         }
         else if (this._graph instanceof GridGraph) {
             if (name == "traversable") {
@@ -612,6 +618,17 @@ export class GraphNode implements EditableGraphComponent {
     }
 
     get graph() {return this._graph;}
+    get heuristic() {
+        if (this.data["h"] != undefined) return this.data["h"];
+        if (this._graph instanceof GridGraph) {
+            let goal = this._graph.endNode;
+            if (!goal) return 0;
+            let dx = Math.abs(this.x - goal.x);
+            let dy = Math.abs(this.y - goal.y);
+            return Mathlib.distanceWithDiagonalCost([dx, dy], (this._graph as GridGraph).diagonalWeights);
+        }
+        return 0;
+    }
 }
 
 export interface GraphNodeStyle {

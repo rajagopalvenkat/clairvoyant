@@ -167,7 +167,7 @@ export default function GraphSearchPage() {
     },[graph, graphStepIndex, graphSteps, handleBackStep, handleStep]);
     
     const handleGraphBackwardsData = useCallback((graph: Graph) => {
-        
+        setGraph(graph);
     },[]);
 
     function resetStepData() {

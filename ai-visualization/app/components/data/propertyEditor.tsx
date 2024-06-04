@@ -3,6 +3,8 @@ import { ItemProperty } from "@/lib/utils/properties"
 import Select from "react-select";
 
 import "./propertyEditor.css"
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "react-toastify";
 
 export function PropertyInspector({properties, onChange}: {
     properties: ItemProperty[],
@@ -29,28 +31,62 @@ export function PropertyField({property, onChange}: {
     )
 }
 
+function PropertySetButton({property, internalValue, text="Apply", onPress}: {
+    property: ItemProperty,
+    internalValue: string,
+    text?: string,
+    onPress: () => void,
+}) {
+    if (property.fixed) {return <></>}
+    return (
+        <button disabled={`${property.value}` == internalValue} className="trigger-button" onClick={() => onPress()}> {text} </button>
+    )
+}
+
 export function PropertyEditor({property, onChange}: {
     property: ItemProperty,
     onChange: (value: any) => void,
 }) {
+    let [internalValue, setInternalValue] = useState(`${property.value}`);
+    
+    let onChangeEnsureFloat = useCallback((value: string) => {
+        let floatValue = parseFloat(value);
+        if (isNaN(floatValue)) {
+            toast.error(`Invalid number: ${value}`);
+            return;
+        }
+        onChange(floatValue);
+    }, [onChange])
+
+    // Update internal value when it is externally changed
+    useEffect(() => {
+        setInternalValue(`${property.value}`);
+    }, [property])
+
     if (property.type === "string") {
         if (property.options) {
             return (
                 <Select unstyled className="" classNames={{
                     control: (state) => {return `${buttonStyleClassNames} rounded pl-2 border-solid border-2 border-secondary-50 dark:border-secondary-950`}, 
                     option: (state) => {return `${buttonStyleClassNames} p-1`}}}
-                    options={property.options}
-                    onChange={e => {e?.value}}>
+                    options={property.options.map(n => {return {value: n, label: n}})}
+                    onChange={e => {onChange(e?.value)}}>
                 </Select>
             )
         }
         return (
-            <input type="text" disabled={property.fixed} value={property.value} onChange={(e) => onChange(e.target.value)} />
+            <>
+                <input type="text" disabled={property.fixed} value={internalValue} onChange={(e) => setInternalValue(e.target.value)} />
+                <PropertySetButton property={property} internalValue={internalValue} onPress={() => onChange(internalValue)} />
+            </>
         )
     }
     if (property.type === "number") {
         return (
-            <input type="number" disabled={property.fixed} value={property.value} onChange={(e) => onChange(parseFloat(e.target.value))} />
+            <>
+                <input type="number" disabled={property.fixed} value={internalValue} onChange={(e) => setInternalValue(e.target.value)} />
+                <PropertySetButton property={property} internalValue={internalValue} onPress={() => onChangeEnsureFloat(internalValue)} />
+            </>
         )
     }
     if (property.type === "boolean") {

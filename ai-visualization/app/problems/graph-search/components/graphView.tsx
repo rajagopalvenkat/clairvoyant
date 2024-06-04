@@ -162,7 +162,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
         graphEdgeInverseIndex = new Map(allGraphEdges.map((edge, index) => [index, edge]));
         visGraphData = {
             nodes: graph.getAllNodes().map((node, _idx) => {
-                return {id: node.id, label: node.id, ...getNodeAttributes(node, visGraphOptions)}
+                return {id: node.id, label: node.getProp("label"), ...getNodeAttributes(node, visGraphOptions)}
             }),
             edges: allGraphEdges.map((edge, index) => {
                 return {id: index, from: edge.source.id, to: edge.target.id, width: edge.weight * edgeScaleFactor, arrows: (edge.isBidirectional ? '' : 'to'), ...edge.renderingAttributes()}
@@ -207,6 +207,10 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
             <div className="edit-menu bg-secondary-100 dark:bg-secondary-900 rounded-xl px-2 py-1">
                 <GraphComponentInspector components={selectedComponents} onChanges={(property: string, oldValue: any, newValue: any) => {
                     // Will have to be edited to support undo/redo
+                    console.log("Changing property", property, "from", oldValue, "to", newValue)
+                    for (let component of selectedComponents) {
+                        component.setProp(property, newValue);
+                    }
                     onGraphChanged(graph!);
                 } }/>
             </div>
