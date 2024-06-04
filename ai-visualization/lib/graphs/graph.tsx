@@ -559,7 +559,7 @@ export class GraphNode implements EditableGraphComponent {
         if (this._graph instanceof GridGraph) {
             result.push({name: "x", type: "number", value: this.x, fixed: true});
             result.push({name: "y", type: "number", value: this.y, fixed: true});
-            result.push({name: "traversable", type: "boolean", value: this.data["traversable"], fixed: true});
+            result.push({name: "traversable", type: "boolean", value: this.data["traversable"]});
         }
         return result;
     }
