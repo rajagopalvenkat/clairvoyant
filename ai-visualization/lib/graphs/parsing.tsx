@@ -110,12 +110,6 @@ export function genericFromGraphNotation(lines: string[]): GenericGraph {
     return result;
 }
 
-const defaultTraversibleStyle: GraphNodeStyle = {
-    "color": "white"
-}
-const defaultUntraversibleStyle: GraphNodeStyle = {
-    "color": "#222222"
-}
 export function gridGraphFromNotation(lines: string[]): GridGraph {
     let dimsRaw = lines[0].substring(lines[0].indexOf(" "))
     let dimsStr = dimsRaw.split("x");
@@ -138,8 +132,7 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
         for (let j = 0; j < x; j++) {
             let node = result.ensureGetNodeByCoords(j, i - 1);
             let val = vals[j];
-            node.data["traversable"] = val;
-            node.style = val == 0 ? defaultUntraversibleStyle : defaultTraversibleStyle;
+            node.data["traversable"] = val > 0;
         }
     }
     

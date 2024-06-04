@@ -3,7 +3,7 @@ import { renderValue } from "@/lib/strings/pretty"
 import { useState } from "react";
 import VisGraph, { GraphData, Options as VisGraphOptions } from "react-vis-graph-wrapper"
 import Stepper from "./stepper";
-import { Font } from "vis-network";
+import { Font, NodeOptions } from "vis-network";
 import { colorWithAlpha } from "@/lib/utils/colors";
 import "./graphView.css"
 import { buttonStyleClassNames, dangerButtonStyleClassNames } from "@/lib/statics/styleConstants";
@@ -12,7 +12,7 @@ import { PropertyInspector } from "@/app/components/data/propertyEditor";
 const edgeScaleFactor = 2;
 function getVisOptions(graph: Graph | null = null): VisGraphOptions {
     let fontColor = "#7777ff";
-    let fontStrokeColor = "black";
+    let fontStrokeColor = "#000000";
     let fontData : Font = {
         size: 14,
         color: fontColor,
@@ -74,8 +74,8 @@ function getColorByState(state: string | undefined): string {
     }
 }
 
-function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): Record<string, any> {
-    let result : Record<string, any> = {};
+function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptions {
+    let result : NodeOptions = {};
     let c;
     switch (node.graph.searchResult) {
         case "success":
@@ -89,13 +89,18 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): Record<st
             break;      
     } 
 
+    let traversabilityAlpha = node.traversable ? 0xff : 0x70;
+    c = colorWithAlpha(c, traversabilityAlpha);
+    result.font = {
+        "color": colorWithAlpha((globals.nodes!.font! as Font).color!, traversabilityAlpha),
+        "strokeColor": colorWithAlpha((globals.nodes!.font! as Font).strokeColor!, traversabilityAlpha),
+    };
+
     if (node.graph instanceof GridGraph) {
         result.shape = "box";
         result.x = node.x * GRIDGRAPH_SCALE_FACTOR;
         result.y = node.y * GRIDGRAPH_SCALE_FACTOR;
-        if (node.data["traversable"] == false) {
-            c = colorWithAlpha(c, 0x80);
-        }
+        
     } else {
         result.shape = "dot";
         result.size = 8;
@@ -111,6 +116,17 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): Record<st
     }
     if (c) result.color = c; 
     return result;
+}
+
+function getEdgeAttributes(edge: GraphEdge): Record<string, any> {
+    let result : Record<string, any> = {};
+    let c = "#ffffff";
+    if (!edge.traversable() && !edge.reverse().traversable()) {
+        c = "#88888818";
+    }
+    result.color = c;
+    return result;
+
 }
 
 export function GraphComponentInspector({components, onChanges}: {
@@ -165,7 +181,8 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                 return {id: node.id, label: node.getProp("label"), ...getNodeAttributes(node, visGraphOptions)}
             }),
             edges: allGraphEdges.map((edge, index) => {
-                return {id: index, from: edge.source.id, to: edge.target.id, width: edge.weight * edgeScaleFactor, arrows: (edge.isBidirectional ? '' : 'to'), ...edge.renderingAttributes()}
+                let [source, target] = edge.data["flipped"] ? [edge.target.id, edge.source.id] : [edge.source.id, edge.target.id];
+                return {id: index, from: source, to: target, width: edge.weight * edgeScaleFactor, arrows: (edge.isBidirectional ? '' : 'to'), ...getEdgeAttributes(edge)}
             })
         };
     }

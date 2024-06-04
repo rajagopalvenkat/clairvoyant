@@ -40,10 +40,10 @@ export class NodeTraverseToggleCommand extends GraphCommand {
     constructor(node: GraphNode) {
         super("Toggle Traverse", (g: Graph) => {
             node.data["traversable"] = !node.data["traversable"];
-            g.markDirtyLookup();
+            (g as GridGraph)?.updateBaseEdges(node);
         }, (g: Graph) => {
             node.data["traversable"] = !node.data["traversable"];
-            g.markDirtyLookup();
+            (g as GridGraph)?.updateBaseEdges(node);
         });
         this.node = node;
     }
@@ -306,20 +306,24 @@ export class GridGraph extends Graph {
 
     updateAllTraversableEdges() {
         for (let node of this.getAllNodes()) {
-            this.updateTraversableEdges(node);
+            this.updateBaseEdges(node);
         }
     }
-    updateTraversableEdges(node: GraphNode) {
-        if (node.data["traversable"] == false) {
+    updateBaseEdges(node: GraphNode) {
+        // Edge traversability is not DYNAMIC!
+        // Edges don't need to be removed, they'll be grayed out if they're not usable
+        // All we have to do is ensure that they exist.
+        
+        /*if (node.data["traversable"] == false) {
             this.clearAllEdgesWith(node.id);
             return;
-        }
+        }*/
         for (let [dx, dy] of adjacentDeltasForWeights(this.diagonalWeights)) {
             let nx = node.x + dx;
             let ny = node.y + dy;
             if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height) continue;
             let target = this.ensureGetNodeByCoords(nx, ny);
-            if (!target.data["traversable"]) continue;
+            // if (!target.data["traversable"]) continue;
             let edge = this.getEdge(node, target)
             if (edge == undefined) {
                 edge = new GraphEdgeSimple(node, target, true);
@@ -356,6 +360,7 @@ function getEdgeProperties(edge: GraphEdge): ItemProperty[] {
         {name: "target", type: "string", value: edge.target.id, fixed: true},
         {name: "weight", type: "number", value: edge.weight},
         {name: "bidirectional", type: "boolean", value: edge.isBidirectional},
+        {name: "flipped", type: "boolean", value: edge.data["flipped"] ?? false}
     ]
 }
 function setEdgeProperty(edge: GraphEdge, name: string, value: any) {
@@ -365,6 +370,8 @@ function setEdgeProperty(edge: GraphEdge, name: string, value: any) {
         edge.weight = value;
     } else if (name == "bidirectional") {
         edge.isBidirectional = value;
+    } else if (name == "flipped") {
+        edge.data["flipped"] = value;
     } else {
         throw new NotImplementedError(`Property ${name} cannot be set for GraphEdge`);
     }
@@ -378,6 +385,8 @@ function getEdgeProperty(edge: GraphEdge, name: string) {
         return edge.weight;
     } else if (name == "bidirectional") {
         return edge.isBidirectional;
+    } else if (name == "flip") {
+        return false;
     }
     throw new Error(`Property ${name} is not implemented for GraphEdge`);
 }
@@ -405,10 +414,8 @@ class ReverseGraphEdgeRef implements GraphEdge {
         return this.ref;
     }
     traversable() {
-        return this.ref.isBidirectional;
-    }
-    renderingAttributes(): Record<string, any> {
-        return this.ref.renderingAttributes();
+        if (!this.source.traversable || !this.target.traversable) return false;
+        return this.ref.isBidirectional || this.ref.data["flipped"];
     }
     getId(): string {
         return `${this.ref.source.id}_${this.ref.target.id}`;
@@ -487,15 +494,12 @@ export class GraphEdgeSimple implements GraphEdge {
     get isRef() {return false;}
 
     reverse(): GraphEdge {
-        return this._reverse; 
+        return this._reverse;
     }
 
     traversable(): boolean {
-        return true;
-    }
-
-    renderingAttributes(): Record<string, any> {
-        return {};
+        if (!this.source.traversable || !this.target.traversable) return false;
+        return this.isBidirectional || !this.data["flipped"];
     }
 
     getId(): string {
@@ -522,7 +526,6 @@ export interface GraphEdge extends EditableGraphComponent {
 
     reverse(): GraphEdge
     traversable(): boolean
-    renderingAttributes(): Record<string, any>;
 }
 
 export interface EditableGraphComponent {
@@ -556,12 +559,12 @@ export class GraphNode implements EditableGraphComponent {
             {name: "label", type: "string", value: this.data["label"] ?? this.id},
             {name: "is_start", type: "boolean", value: this._graph.startNode?.id == this.id, trigger: true},
             {name: "is_goal", type: "boolean", value: this._graph.endNode?.id == this.id, trigger: true},
-            {name: "h", type: "number", value: this.heuristic}
+            {name: "h", type: "number", value: this.heuristic},
+            {name: "traversable", type: "boolean", value: this.traversable},
         ];
         if (this._graph instanceof GridGraph) {
             result.push({name: "x", type: "number", value: this.x, fixed: true});
             result.push({name: "y", type: "number", value: this.y, fixed: true});
-            result.push({name: "traversable", type: "boolean", value: this.data["traversable"]});
         }
         return result;
     }
@@ -571,10 +574,10 @@ export class GraphNode implements EditableGraphComponent {
         if (name == "is_goal") return this._graph.endNode?.id == this.id;
         if (name == "label") return this.data["label"] ?? this.id;
         if (name == "h") return this.heuristic;
+        if (name == "traversable") return this.traversable;
         if (this._graph instanceof GridGraph) {
             if (name == "x") return this.x;
             if (name == "y") return this.y;
-            if (name == "traversable") return this.data["traversable"];
         }
         throw new NotImplementedError(`Property ${name} is not implemented for GraphNode`);
     }
@@ -592,15 +595,10 @@ export class GraphNode implements EditableGraphComponent {
         else if (name == "is_goal") {
             // Initial checks ensure that this is set to true
             this._graph.endNode = this;
-        }
-        else if (name == "h") {
+        } else if (name == "h") {
             this.data["h"] = value;
-        }
-        else if (this._graph instanceof GridGraph) {
-            if (name == "traversable") {
-                this.data["traversable"] = value;
-                (this._graph as GridGraph).updateTraversableEdges(this);
-            }
+        } else if (name == "traversable") {
+            this.data["traversable"] = value;
         }
     }
 
@@ -628,6 +626,10 @@ export class GraphNode implements EditableGraphComponent {
             return Mathlib.distanceWithDiagonalCost([dx, dy], (this._graph as GridGraph).diagonalWeights);
         }
         return 0;
+    }
+    get traversable() {
+        if (this.data["traversable"] === false) return false;
+        return true; 
     }
 }
 
