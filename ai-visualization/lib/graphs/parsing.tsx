@@ -1,5 +1,5 @@
 import { NotImplementedError, ParsingError } from "../errors/error";
-import { GenericGraph, Graph, GraphEdgeSimple, GraphEdgeStyle, GraphNode, GraphNodeStyle, GridGraph, ADJACENT_POSITIVE_DELTAS } from "./graph";
+import { GenericGraph, Graph, GraphEdgeSimple, GraphEdgeStyle, GraphNode, GraphNodeStyle, GridGraph, defaultDiagWeightNames } from "./graph";
 
 function removeQuotes(s: string): string {
     if (s.startsWith("\"")) return s.substring(1, s.length - 1);
@@ -153,6 +153,8 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
     console.log(debugData);
 
     // Construction of edges
+    // Now done in a separate function!
+    /*
     for (let i = 0; i < y; i++) {
         for (let j = 0; j < x; j++) {
             const thisNode = result.ensureGetNodeByCoords(j, i);
@@ -168,7 +170,9 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
             }
         }
     }
+    */
     //console.log(result.getAllEdges());
+    result.updateAllTraversableEdges();
     for (let i = y + 1; i < lines.length; i++) {
         let line = lines[i].trim();
         let parsedCmd = parseCommand(line, i);
@@ -180,6 +184,19 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
                 let node = getSingleNodeFromCoordArgs(result, args, "node setup", i, cmd);
                 [node.data, node.style] = splitDataAndStyle<GraphNodeStyle>(data);
                 result.addNode(node);
+                break;
+            case "DIAGONAL":
+                ensureArgsLength(args, 1, "diagonal setting", i, cmd);
+                let diagMode = args[0].toLowerCase();
+                let diagWeight = parseFloat(diagMode);
+                if (!isNaN(diagWeight)) {
+                    result.diagonalWeights = diagWeight;
+                    result.updateAllTraversableEdges();
+                    break;
+                }
+                if (!(diagMode in defaultDiagWeightNames)) throw new ParsingError(`Invalid diagonal weight mode, expected one of ${Object.keys(defaultDiagWeightNames).join(", ")} or a number, got ${diagMode}`, i, cmd.length + 1);
+                result.diagonalWeights = defaultDiagWeightNames[diagMode];
+                result.updateAllTraversableEdges();
                 break;
             case "EDGE":
                 ensureArgsLength(args, 4, "edge setup", i, cmd)

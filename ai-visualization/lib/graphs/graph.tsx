@@ -1,14 +1,32 @@
 import { NotImplementedError, ParsingError, RuntimeError } from "../errors/error";
-import { colorWithAlpha } from "../utils/colors";
 import { Command, CommandHandler } from "../utils/commands";
-import { genericFromGraphNotation, gridGraphFromNotation, notationFromGenericGraph, notationFromGridGraph } from "./parsing";
+import { ItemProperty, canSetProps } from "../utils/properties";
 
-export const ADJACENT_DELTAS = [
+export const DIAGONAL_WEIGHT_DISABLED = -1;
+export const DIAGONAL_WEIGHT_CHEBYSHEV = 1;
+export const DIAGONAL_WEIGHT_EUCLIDEAN = 1.4142135623730951;
+export const DIAGONAL_WEIGHT_MANHATTAN = 2;
+export const defaultDiagWeightNames: Record<string, number> = {
+    "disabled": DIAGONAL_WEIGHT_DISABLED,
+    "manhattan": DIAGONAL_WEIGHT_MANHATTAN,
+    "euclidean": DIAGONAL_WEIGHT_EUCLIDEAN,
+    "chebyshev": DIAGONAL_WEIGHT_CHEBYSHEV
+}
+
+export const ADJACENT_DELTAS: [number, number][] = [
     [0, 1], [0, -1], [1, 0], [-1, 0]
 ];
-export const ADJACENT_POSITIVE_DELTAS = [
-    [0, 1], [1, 0]
-];
+export const ADJACENT_DELTAS_DIAG: [number, number][] = [
+    [0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]
+]
+export function adjacentDeltasForWeights(weight: number): [number, number][] {
+    if (weight < 0) {
+        return ADJACENT_DELTAS;
+    }
+    return ADJACENT_DELTAS_DIAG;
+}
+
+import { genericFromGraphNotation, gridGraphFromNotation, notationFromGenericGraph, notationFromGridGraph } from "./parsing";
 
 export class GraphCommand extends Command<Graph> {
     constructor(name: string, cmd_do: (g: Graph) => void, cmd_undo: (g: Graph) => void) {
@@ -175,7 +193,7 @@ export abstract class Graph {
     public getEdge(sourceNode: GraphNode, targetNode: GraphNode): GraphEdge | undefined {
         this.ensureLookupClean();
         let edges = this._edgeLookup.get(sourceNode.id);
-        console.log(edges);
+        // console.log(edges);
         if (!edges) return undefined;
         for (let edge of edges) {
             if (edge.target.id == targetNode.id && edge.traversable()) return edge;
@@ -253,11 +271,13 @@ export const GRAPH_TYPE_NAMES: string[] = ["GRID", "GENERIC"];
 export class GridGraph extends Graph {
     width: number;
     height: number;
+    diagonalWeights: number;
 
-    constructor(width: number, height: number) {
+    constructor(width: number, height: number, diagonalWeights: number = DIAGONAL_WEIGHT_DISABLED) {
         super()
         this.width = width;
         this.height = height;
+        this.diagonalWeights = diagonalWeights;
     }
 
     static fromGraphNotation(lines: string[]): GridGraph {
@@ -283,6 +303,33 @@ export class GridGraph extends Graph {
         return node;
     }
 
+    updateAllTraversableEdges() {
+        for (let node of this.getAllNodes()) {
+            this.updateTraversableEdges(node);
+        }
+    }
+    updateTraversableEdges(node: GraphNode) {
+        if (node.data["traversable"] == false) {
+            this.clearAllEdgesWith(node.id);
+            return;
+        }
+        for (let [dx, dy] of adjacentDeltasForWeights(this.diagonalWeights)) {
+            let nx = node.x + dx;
+            let ny = node.y + dy;
+            if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height) continue;
+            let target = this.ensureGetNodeByCoords(nx, ny);
+            if (!target.data["traversable"]) continue;
+            let edge = this.getEdge(node, target)
+            if (edge == undefined) {
+                edge = new GraphEdgeSimple(node, target, true);
+                this.addEdge(edge);
+            }
+            if (Math.abs(dx) + Math.abs(dy) > 1) {
+                edge.data["w"] = this.diagonalWeights;                
+            }
+        }
+    }
+
     stringify(): string {
         return notationFromGridGraph(this);
     }
@@ -300,6 +347,38 @@ export class GenericGraph extends Graph {
     stringify(): string {
         return notationFromGenericGraph(this);
     }
+}
+
+function getEdgeProperties(edge: GraphEdge): ItemProperty[] {
+    return [
+        {name: "source", type: "string", value: edge.source.id, fixed: true},
+        {name: "target", type: "string", value: edge.target.id, fixed: true},
+        {name: "weight", type: "number", value: edge.weight},
+        {name: "bidirectional", type: "boolean", value: edge.isBidirectional},
+    ]
+}
+function setEdgeProperty(edge: GraphEdge, name: string, value: any) {
+    let setAnalysis = canSetProps(getEdgeProperties(edge), [{name, value}]);
+    if (!setAnalysis.success) throw new Error(setAnalysis.errors.join("\n"));
+    if (name == "weight") {
+        edge.weight = value;
+    } else if (name == "bidirectional") {
+        edge.isBidirectional = value;
+    } else {
+        throw new NotImplementedError(`Property ${name} cannot be set for GraphEdge`);
+    }
+}
+function getEdgeProperty(edge: GraphEdge, name: string) {
+    if (name == "source") {
+        return edge.source.id;
+    } else if (name == "target") {
+        return edge.target.id;
+    } else if (name == "weight") {
+        return edge.weight;
+    } else if (name == "bidirectional") {
+        return edge.isBidirectional;
+    }
+    throw new Error(`Property ${name} is not implemented for GraphEdge`);
 }
 
 class ReverseGraphEdgeRef implements GraphEdge {
@@ -333,6 +412,19 @@ class ReverseGraphEdgeRef implements GraphEdge {
     getId(): string {
         return `${this.ref.source.id}_${this.ref.target.id}`;
     }
+
+    get properties(): ItemProperty[] {
+        return getEdgeProperties(this);
+    }
+    getProp(name: string) {
+        return getEdgeProperty(this, name);
+    }
+    setProp(name: string, value: any): void {
+        setEdgeProperty(this, name, value);
+    }
+    delete(): void {
+        this.source.graph.removeEdge(this);
+    }
 }
 
 export class GraphEdgeSimple implements GraphEdge {
@@ -350,6 +442,18 @@ export class GraphEdgeSimple implements GraphEdge {
         this._data = data;
         this._style = {};
         this._reverse = new ReverseGraphEdgeRef(this);
+    }
+    get properties(): ItemProperty[] {
+        return getEdgeProperties(this);
+    }
+    getProp(name: string) {
+        return getEdgeProperty(this, name);
+    }
+    setProp(name: string, value: any): void {
+        setEdgeProperty(this, name, value);
+    }
+    delete(): void {
+        this.source.graph.removeEdge(this);
     }
     
     get source() {return this._source;}
@@ -398,7 +502,7 @@ export class GraphEdgeSimple implements GraphEdge {
     }
 }
 
-export interface GraphEdge {
+export interface GraphEdge extends EditableGraphComponent {
     getId(): string;
     get source(): GraphNode
     set source(node: GraphNode)
@@ -420,7 +524,16 @@ export interface GraphEdge {
     renderingAttributes(): Record<string, any>;
 }
 
-export class GraphNode {
+export interface EditableGraphComponent {
+    get properties(): ItemProperty[];
+    
+    getProp(name: string): any;
+    setProp(name: string, value: any): void;
+
+    delete(): void;
+}
+
+export class GraphNode implements EditableGraphComponent {
     id: string;
     x: number;
     y: number;
@@ -434,6 +547,68 @@ export class GraphNode {
         this.x = x;
         this.y = y;
         this.data = data;
+    }
+
+    get properties(): ItemProperty[] {
+        let result: ItemProperty[] = [
+            {name: "id", type: "string", value: this.id, fixed: true},
+            {name: "label", type: "string", value: this.data["label"] ?? this.id},
+            {name: "is_start", type: "boolean", value: this._graph.startNode?.id == this.id, trigger: true},
+            {name: "is_goal", type: "boolean", value: this._graph.endNode?.id == this.id, trigger: true},
+        ];
+        if (this._graph instanceof GridGraph) {
+            result.push({name: "x", type: "number", value: this.x, fixed: true});
+            result.push({name: "y", type: "number", value: this.y, fixed: true});
+            result.push({name: "traversable", type: "boolean", value: this.data["traversable"], fixed: true});
+        }
+        return result;
+    }
+    getProp(name: string) {
+        if (name == "id") return this.id;
+        if (name == "is_start") return this._graph.startNode?.id == this.id;
+        if (name == "is_goal") return this._graph.endNode?.id == this.id;
+        if (name == "label") return this.data["label"] ?? this.id;
+        if (this._graph instanceof GridGraph) {
+            if (name == "x") return this.x;
+            if (name == "y") return this.y;
+            if (name == "traversable") return this.data["traversable"];
+        }
+        throw new NotImplementedError(`Property ${name} is not implemented for GraphNode`);
+    }
+    setProp(name: string, value: any): void {
+        let setAnalysis = canSetProps(this.properties, [{name: value}]);
+        if (!setAnalysis.success) throw new Error(setAnalysis.errors.join("\n"));
+        
+        if (name == "label") {
+            this.data["label"] = value;
+        }
+        else if (name == "is_start") {
+            // Initial checks ensure that this is set to true
+            this._graph.startNode = this;
+        }
+        else if (name == "is_goal") {
+            // Initial checks ensure that this is set to true
+            this._graph.endNode = this;
+        }
+        else if (this._graph instanceof GridGraph) {
+            if (name == "traversable") {
+                this.data["traversable"] = value;
+                (this._graph as GridGraph).updateTraversableEdges(this);
+            }
+        }
+    }
+
+    delete(): void {
+        if (this._graph instanceof GridGraph) { 
+            throw new Error("Grid Graph nodes may not be deleted, modify the grid size instead.");
+        }
+        if (this._graph.endNode?.id == this.id) {
+            throw new Error("Cannot delete the goal node of the graph. Set another node as the goal first.");
+        }
+        if (this._graph.startNode?.id == this.id) {
+            throw new Error("Cannot delete the start node of the graph. Set another node as the start first.");
+        }
+        this._graph.removeNode(this);
     }
 
     get graph() {return this._graph;}

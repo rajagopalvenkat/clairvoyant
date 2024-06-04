@@ -1,0 +1,32 @@
+.right-float {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.bottom-float {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.generic-helper {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+.edit-menu {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
+
+.dimension-button {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    margin: 2px;
+}
+

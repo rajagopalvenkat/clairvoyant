@@ -166,6 +166,10 @@ export default function GraphSearchPage() {
         }
     },[graph, graphStepIndex, graphSteps, handleBackStep, handleStep]);
     
+    const handleGraphBackwardsData = useCallback((graph: Graph) => {
+        
+    },[]);
+
     function resetStepData() {
         setGraphStepIndex(0);
         setDebugData(null);
@@ -196,7 +200,7 @@ export default function GraphSearchPage() {
                     setLeftWidth(leftWidth + v);
                 })}></VDivider>
                 <div className="p-3 m-2 rounded-md border-accent dark:border-accent-200 border-solid border flex-grow">
-                    <GraphView graph={graph} stepHandler={onStepRequested}
+                    <GraphView graph={graph} stepHandler={onStepRequested} onGraphChanged={handleGraphBackwardsData}
                     totalSteps={graphSteps.length} logData={debugData} stepIndex={graphStepIndex}></GraphView>
                 </div>
             </div>

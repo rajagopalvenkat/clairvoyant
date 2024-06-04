@@ -3,7 +3,7 @@ import { API_URL } from "@/lib/statics/appConstants";
 import { buttonStyleClassNames } from "@/lib/statics/styleConstants";
 import { capitalize, formatPrettyFile } from "@/lib/strings/pretty";
 import { useCallback, useEffect, useState } from "react";
-import Select, { ClassNamesConfig } from "react-select";
+import Select from "react-select";
 import ClipboardButton from "../clipboardButton";
 
 const init_defaultCases: string[] = [];

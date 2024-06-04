@@ -1,0 +1,43 @@
+input[type="number"] {
+    width: 4rem;
+    padding: 0 0.25rem;
+}
+input[type="text"] {
+    width: 6rem;
+    padding: 0 0.25rem;
+}
+.trigger-button {
+    border-color: #225;
+    border-width: 1px;
+    border-style: solid;
+    background-color: #bbf;
+    padding: 0 0.5rem;
+    margin-left: 0.25rem;
+    border-radius: 0.5rem;
+}
+.trigger-button:disabled {
+    border-color: #777;
+    background-color: #bbb;
+    color: #000;
+}
+
+@media (prefers-color-scheme: dark) {
+    input {
+        background-color: #333;
+        color: #fff;
+    }
+    input:disabled {
+        background-color: #777;
+        color: #fff;
+    }
+    .trigger-button {
+        border-color: #bbf;
+        background-color: #225;
+        color: #fff;
+    }
+    .trigger-button:disabled {
+        border-color: #bbb;
+        background-color: #777;
+        color: #fff;
+    }
+}
