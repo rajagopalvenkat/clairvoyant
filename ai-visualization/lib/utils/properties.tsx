@@ -5,7 +5,23 @@ export interface ItemProperty {
     fixed?: boolean;
     trigger?: boolean;
     options?: any[];
+    hidden?: boolean;
     check?: (value: any) => boolean;
+}
+
+export interface ItemPropertyChange<T> {
+    property: string;
+    oldValue: any;
+    newValue: any;
+    target: T;
+}
+
+export interface EditableComponent {
+    get id(): string | number;
+    get properties(): ItemProperty[];
+    
+    getProp(name: string): any;
+    setProp(name: string, value: any): void;
 }
 
 export function canSetProps(properties: ItemProperty[], values: Record<string, any>): {success: boolean, errors: string[]} {
@@ -20,4 +36,12 @@ export function canSetProps(properties: ItemProperty[], values: Record<string, a
         if (p.check && !p.check(value)) {errors.push(`Property ${name} failed a custom check.`); continue;}
     }
     return {success: errors.length == 0, errors: errors};
+}
+
+export function executePropertyChange<T extends EditableComponent>(change: ItemPropertyChange<T>) {
+    change.target.setProp(change.property, change.newValue);
+}
+
+export function revertPropertyChange<T extends EditableComponent>(change: ItemPropertyChange<T>) {
+    change.target.setProp(change.property, change.oldValue);
 }

@@ -1,4 +1,6 @@
-import { Graph, GraphNode } from "./graph";
+import { Command, PropertyChangeCommand } from "../utils/commands";
+import { ItemPropertyChange } from "../utils/properties";
+import { EditableGraphComponent, Graph, GraphNode } from "./graph";
 
 const GSR_SUCCESS = "success";
 const GSR_FAILURE = "failure";
@@ -10,10 +12,12 @@ export class GraphSearchResult {
     actType: string;
     cell: GraphNode | null;
     debugValue: any;
-    constructor(actType: string, cell: GraphNode | null = null, debugValue: any = null) {
+    command?: Command<Graph>;
+    constructor(actType: string, cell: GraphNode | null = null, debugValue: any = null, command?: Command<Graph>) {
         this.actType = actType;
         this.cell = cell;
         this.debugValue = debugValue;
+        this.command = command;
     }
 
     isTerminal(): boolean {
@@ -57,6 +61,12 @@ export class GraphSearchSolution {
     }
     expand(cell: GraphNode, debugValue: any = null): void {
         this.__steps.push(new GraphSearchResult(GSR_EXPAND, cell, debugValue));
+    }
+    highlight(components: EditableGraphComponent[], debugValue: any = null): void {
+        this.alter(components.map(c => {return {target: c, property: "highlighted", oldValue: false, newValue: true}}), debugValue);
+    }
+    alter(changes: ItemPropertyChange<EditableGraphComponent>[], debugValue: any = null): void {
+        this.__steps.push(new GraphSearchResult(GSR_NONE, null, debugValue, new PropertyChangeCommand(changes)));
     }
     log(debugValue: any) {
         this.__steps.push(new GraphSearchResult(GSR_NONE, null, debugValue));

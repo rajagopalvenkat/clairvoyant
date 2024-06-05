@@ -1,8 +1,8 @@
 GENERIC
-NODE first {"h": 2, "style": {"color": "green"}}
-NODE second
-NODE third
-NODE "dead end"
+NODE first {"h": 2}
+NODE second {"h": 1.25}
+NODE third {"h": 0.75}
+NODE "dead end" {"h": 100}
 NODE goal
 
 EDGE first second -b 

@@ -90,7 +90,7 @@ export function genericFromGraphNotation(lines: string[]): GenericGraph {
                 let nodeA = ensureGetNodeById(result, args[0], "edge setup", line, i);
                 let nodeB = ensureGetNodeById(result, args[1], "edge setup", line, i);
                 let bidirectional = opts.includes("-b") || opts.includes("--bidirectional");
-                let edge = new GraphEdgeSimple(nodeA, nodeB, bidirectional);
+                let edge = new GraphEdgeSimple(result.getNextEdgeIdentifier(), nodeA, nodeB, bidirectional);
                 [edge.data, edge.style] = splitDataAndStyle<GraphEdgeStyle>(data);
                 result.addEdge(edge);
                 break;

@@ -89,8 +89,12 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
             break;      
     } 
 
+
     let traversabilityAlpha = node.traversable ? 0xff : 0x70;
     c = colorWithAlpha(c, traversabilityAlpha);
+    let borderColor = node.data["highlighted"] ? "#ff0000" : c;
+    result.borderWidth = node.data["highlighted"] ? 3 : 1;
+    result.color = {border: borderColor, background: c};
     result.font = {
         "color": colorWithAlpha((globals.nodes!.font! as Font).color!, traversabilityAlpha),
         "strokeColor": colorWithAlpha((globals.nodes!.font! as Font).strokeColor!, traversabilityAlpha),
@@ -114,7 +118,6 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
         result.shape = "star";
         result.size = 15;
     }
-    if (c) result.color = c; 
     return result;
 }
 
@@ -199,6 +202,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
 
     const gridOnly = graph instanceof GridGraph ? "" : "hidden";
     const genericOnly = graph instanceof GenericGraph ? "" : "hidden";
+    const hideIfNothingSelected = selectedComponents.length > 0 ? "" : "hidden";
 
     return ( 
     <div className="flex flex-col h-full">
@@ -221,7 +225,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                 <button className={`${buttonStyleClassNames} dimension-button`}>+</button>
             </div>
             <div className={`generic-helper ${genericOnly}`}>D</div>
-            <div className="edit-menu bg-secondary-100 dark:bg-secondary-900 rounded-xl px-2 py-1">
+            <div className={`edit-menu bg-secondary-100 dark:bg-secondary-900 rounded-xl px-2 py-1 ${hideIfNothingSelected}`}>
                 <GraphComponentInspector components={selectedComponents} onChanges={(property: string, oldValue: any, newValue: any) => {
                     // Will have to be edited to support undo/redo
                     console.log("Changing property", property, "from", oldValue, "to", newValue)

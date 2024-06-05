@@ -105,9 +105,14 @@ export default function GraphSearchPage() {
             case "failure":
                 graph.fail();
                 break;
+            case "none":
+                break;
             default:
                 console.error("Unknown step type: ", step.actType);
                 break;
+        }
+        if (step.command) {
+            step.command.execute(graph);
         }
         setDebugData(step.debugValue);
         setGraphStepIndex(stepIndex + 1);
@@ -135,9 +140,14 @@ export default function GraphSearchPage() {
             case "failure":
                 graph.unfail();
                 break;
+            case "none":
+                break;
             default:
                 console.error("Unknown step type: ", step.actType);
                 break;
+        }
+        if (step.command) {
+            step.command.revert(graph);
         }
         setDebugData(stepIndex >= 2 ? steps[stepIndex - 2].debugValue : null);
         setGraphStepIndex(stepIndex - 1);

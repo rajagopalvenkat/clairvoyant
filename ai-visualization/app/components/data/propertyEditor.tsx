@@ -12,7 +12,7 @@ export function PropertyInspector({properties, onChange}: {
 }) {
     return (
         <div className="flex flex-col">
-            {properties.map((property, index) => (
+            {properties.filter(p => !p.hidden).map((property, index) => (
                 <PropertyField key={index} property={property} onChange={(value) => onChange(property.name, property.value, value)} />
             ))}
         </div>

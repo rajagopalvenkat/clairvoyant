@@ -129,6 +129,7 @@ export const ConstDocArray = new EDocType("Array", "https://developer.mozilla.or
 export const ConstDocGenerator = new EDocType("Generator", "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator");
 export const ConstDocMap = new EDocType("Map", "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map");
 export const ConstDocSet = new EDocType("Set", "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set");
+export const ConstDocRecord = new EDocType("Record", "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Record");
 
 export function formatArgs(args: DocArg[]) {
     let result: ReactNode[] = []

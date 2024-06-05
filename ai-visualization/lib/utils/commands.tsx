@@ -1,3 +1,5 @@
+import { EditableComponent, ItemPropertyChange, executePropertyChange, revertPropertyChange } from "./properties";
+
 export class Command<T> {
     name: string;
     done: boolean;
@@ -76,5 +78,17 @@ export class CommandHandler<T> {
             throw new Error("No more commands to undo.");
         }
         this.currentIndex--;
+    }
+}
+
+export class PropertyChangeCommand extends Command<any> {
+    changes: ItemPropertyChange<EditableComponent>[];
+    constructor(changes: ItemPropertyChange<EditableComponent>[]) {
+        super("Change Property", (_) => {
+            this.changes.forEach(c => executePropertyChange(c));
+        }, (_) => {
+            this.changes.forEach(c => revertPropertyChange(c));
+        });
+        this.changes = changes;
     }
 }
