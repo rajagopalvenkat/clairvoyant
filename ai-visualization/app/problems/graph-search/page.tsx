@@ -76,7 +76,7 @@ export default function GraphSearchPage() {
             setGraphErrorMessage(error.message);
             return;
         }
-    },[]);
+    }, []);
 
     const onSolutionDataChanged = useCallback((rawData: string) => {
         setSolutionData(rawData);
@@ -178,6 +178,7 @@ export default function GraphSearchPage() {
     
     const handleGraphBackwardsData = useCallback((graph: Graph) => {
         setGraph(graph);
+        setGraphData(graph.stringify());
     },[]);
 
     function resetStepData() {

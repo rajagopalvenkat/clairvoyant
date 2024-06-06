@@ -44,10 +44,12 @@ class HeuristicChecker {
         distances[origin.id] = 0;
         while (queue.size() > 0) {
             let current = queue.dequeue();
-            let neighbors = Array.from(this.graph.getReverseAdjacentData(current));
-            //this.log("Expanding node " + current.id + " with neighbors " + neighbors.map(([n,_]) => n.id).join(", "));
-            for (let [adj,g] of neighbors) {
-                let newDist = distances[current.id] + g;
+            let neighbors = Array.from(this.graph.getIncomingEdges(current));
+            for (let edge of neighbors) {
+                let newDist = distances[current.id] + edge.weight;
+                // Note that the obtained edges are reversed, so the "target" and "source" are swapped.
+                // Alternatively, edge.reverse().target can be used.
+                let adj = edge.source.id;
                 if (newDist >= distances[adj.id]) {continue;}
                 distances[adj.id] = newDist;
                 queue.enqueue(adj, newDist);

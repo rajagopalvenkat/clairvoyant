@@ -1,0 +1,23 @@
+.dialog {
+    padding: 0.5rem;
+    border-radius: 1rem;
+    display: flex;
+    flex-direction: column;
+    min-width: 20rem;
+}
+
+.dialog-title {
+    align-self: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.dialog-message {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+*:has(> .dialog){
+    background: transparent;
+}

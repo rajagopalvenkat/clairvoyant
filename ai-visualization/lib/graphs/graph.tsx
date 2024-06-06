@@ -14,22 +14,16 @@ export const defaultDiagWeightNames: Record<string, number> = {
     "chebyshev": DIAGONAL_WEIGHT_CHEBYSHEV
 }
 
-export const ADJACENT_DELTAS: [number, number][] = [
+export const ADJACENT_DELTAS_ORTHO: [number, number][] = [
     [0, 1], [0, -1], [1, 0], [-1, 0]
 ];
-export const ADJACENT_DELTAS_DIAG: [number, number][] = [
+export const ADJACENT_DELTAS: [number, number][] = [
     [0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]
 ]
-export function adjacentDeltasForWeights(weight: number): [number, number][] {
-    if (weight < 0) {
-        return ADJACENT_DELTAS;
-    }
-    return ADJACENT_DELTAS_DIAG;
-}
 
 import { genericFromGraphNotation, gridGraphFromNotation, notationFromGenericGraph, notationFromGridGraph } from "./parsing";
 
-export abstract class Graph {
+export abstract class Graph implements EditableComponent {
     protected _nodeLookup = new Map<string, GraphNode>(); // Used for data/existence access
     protected _edgeLookup = new Map<string, GraphEdge[]>(); // Used to look up connections to/from nodes
     protected _edgeIdLookup = new Map<number, GraphEdge>(); // Used to look up edges by id
@@ -44,6 +38,39 @@ export abstract class Graph {
     get dirtyRender() {return this.isDirtyRender}
     get dirtyLookup() {return this.isDirtyLookup}
     get searchResult() {return this._searchResult}
+
+    get id(): string | number {
+        return 0;
+    }
+    get properties(): ItemProperty[] {
+        return [
+            {name: "start", type: "string", value: this.startNode?.id},
+            {name: "end", type: "string", value: this.endNode?.id},
+        ]
+    }
+    getProp(name: string) {
+        let properties = this.properties;
+        let prop = properties.find(p => p.name == name);
+        if (!prop) throw new Error(`Property ${name} is not implemented for Graph`);
+        return prop.value;
+    }
+    setProp(name: string, value: any): boolean {
+        let analysis = canSetProps(this.properties, {[name]: value});
+        if (!analysis.success) throw new Error(analysis.errors.join("\n"));
+
+        if (name == "start") {
+            let n = this.getNodeById(value);
+            if (n == undefined) throw new Error(`Node ${value} does not exist in the graph.`);
+            this.startNode = n;
+        } else if (name == "end") {
+            let n = this.getNodeById(value);
+            if (n == undefined) throw new Error(`Node ${value} does not exist in the graph.`);
+            this.endNode = n;
+        } else {
+            return false;
+        }
+        return true;
+    }
 
     markDirtyLookup() {
         this.isDirtyLookup = true;
@@ -130,6 +157,10 @@ export abstract class Graph {
     public resetStepData() {
         for (let node of this.getAllNodes()) {
             this.setNodeState(node, "");
+            node.data["highlighted"] = false;
+        }
+        for (let edge of this.getAllEdges()) {
+            edge.data["highlighted"] = false;
         }
         this._searchResult = "";
     }
@@ -202,18 +233,17 @@ export abstract class Graph {
     // Useful functions for algorithms
     /// Generates nodes which are adjacent to the given node
     public *getAdjacentNodes(node: GraphNode): Generator<GraphNode> {
-        for (let [n, _] of this.getAdjacentData(node)) {
-            yield n;
+        for (let edge of this.getAdjacentEdges(node)) {
+            yield edge.target;
         }
     }
-    public *getReverseAdjacentNodes(node: GraphNode): Generator<GraphNode> {
-        for (let [n, _] of this.getReverseAdjacentData(node)) {
-            yield n;
+    public *getIncomingNodes(node: GraphNode): Generator<GraphNode> {
+        for (let edge of this.getIncomingEdges(node)) {
+            yield edge.target;
         }
     }
 
-    /// Generates pairs node-weight, useful for edge-cost-sensitive solutions
-    public *getAdjacentData(node: GraphNode): Generator<[GraphNode, number]> {
+    public *getAdjacentEdges(node: GraphNode, includeUntraversable = false): Generator<GraphEdge> {
         this.ensureLookupClean();
         //console.log(this._edgeLookup.keys())
         if (!this._edgeLookup.has(node.id)) return;
@@ -221,17 +251,18 @@ export abstract class Graph {
         //console.log("Adjacent edges: ", adjEdges);
         for (let edge of adjEdges) {
             //console.log("Edge: ", edge, "Traversable: ", edge.traversable());
-            if (!edge.traversable()) continue;
-            yield [edge.target, edge.weight];
+            if (!includeUntraversable && !edge.traversable()) continue;
+            yield edge;
         }
     }
-    public *getReverseAdjacentData(node: GraphNode): Generator<[GraphNode, number]> {
+    public *getIncomingEdges(node: GraphNode, includeUntraversable = false): Generator<GraphEdge> {
         this.ensureLookupClean();
         if (!this._edgeLookup.has(node.id)) return;
         let adjEdges = this._edgeLookup.get(node.id) || [];
         for (let edge of adjEdges) {
-            if (!edge.reverse().traversable()) continue;
-            yield [edge.target, edge.weight];
+            let rev = edge.reverse();
+            if (!includeUntraversable && !rev.traversable()) continue;
+            yield rev;
         }
     }
 
@@ -288,6 +319,33 @@ export class GridGraph extends Graph {
         return `${x}_${y}`;
     }
 
+    override get properties(): ItemProperty[] {
+        return [
+            ...super.properties,
+            {name: "width", type: "number", value: this.width, check: (v: any) => v > 0 && Math.floor(v) == v},
+            {name: "height", type: "number", value: this.height, check: (v: any) => v > 0 && Math.floor(v) == v},
+            {name: "diagonal_weights", type: "number", value: this.diagonalWeights}
+        ]
+    }
+
+    override setProp(name: string, value: any): boolean {
+        if (super.setProp(name, value)) return true;
+
+        if (name == "width") {
+            throw new NotImplementedError("Changing the width of a grid graph");
+            this.width = value;
+        } else if (name == "height") {
+            throw new NotImplementedError("Changing the height of a grid graph");
+            this.height = value;
+        } else if (name == "diagonal_weights") {
+            this.diagonalWeights = value;
+            this.updateAllTraversableEdges();
+        } else {
+            return false;
+        }
+        return true;
+    }
+
     createNode(x: number, y: number, data: Object = {}): GraphNode {
         let node = new GraphNode(this, GridGraph.idFromCoords(x, y), x, y, data);
         this.addNode(node);
@@ -317,7 +375,7 @@ export class GridGraph extends Graph {
             this.clearAllEdgesWith(node.id);
             return;
         }*/
-        for (let [dx, dy] of adjacentDeltasForWeights(this.diagonalWeights)) {
+        for (let [dx, dy] of ADJACENT_DELTAS) {
             let nx = node.x + dx;
             let ny = node.y + dy;
             if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height) continue;
@@ -329,7 +387,8 @@ export class GridGraph extends Graph {
                 this.addEdge(edge);
             }
             if (Math.abs(dx) + Math.abs(dy) > 1) {
-                edge.data["w"] = this.diagonalWeights;                
+                edge.data["w"] = this.diagonalWeights;
+                edge.data["forbidden"] = this.diagonalWeights < 0;
             }
         }
     }
@@ -361,10 +420,11 @@ function getEdgeProperties(edge: GraphEdge): ItemProperty[] {
         {name: "weight", type: "number", value: edge.weight},
         {name: "bidirectional", type: "boolean", value: edge.isBidirectional},
         {name: "flipped", type: "boolean", value: edge.data["flipped"] ?? false},
-        {name: "highlighted", type: "boolean", value: edge.data["highlighted"], hidden: true}
+        {name: "highlighted", type: "boolean", value: edge.data["highlighted"] ?? false, hidden: false},
+        {name: "forbidden", type: "boolean", value: edge.data["forbidden"] ?? false, hidden: false}
     ]
 }
-function setEdgeProperty(edge: GraphEdge, name: string, value: any) {
+function setEdgeProperty(edge: GraphEdge, name: string, value: any): boolean {
     let setAnalysis = canSetProps(getEdgeProperties(edge), {[name]: value});
     if (!setAnalysis.success) throw new Error(setAnalysis.errors.join("\n"));
     if (name == "weight") {
@@ -375,9 +435,12 @@ function setEdgeProperty(edge: GraphEdge, name: string, value: any) {
         edge.data["flipped"] = value;
     } else if (name == "highlighted") {
         edge.data["highlighted"] = value;
+    } else if (name == "forbidden") {
+        edge.data["forbidden"] = value;
     } else {
-        throw new NotImplementedError(`Property ${name} cannot be set for GraphEdge`);
+        return false;
     }
+    return true;
 }
 function getEdgeProperty(edge: GraphEdge, name: string) {
     if (name == "id") {
@@ -393,7 +456,9 @@ function getEdgeProperty(edge: GraphEdge, name: string) {
     } else if (name == "flipped") {
         return edge.data["flipped"];
     } else if (name == "highlighted") {
-        return edge.data["highlighted"];
+        return edge.data["highlighted"] ?? false;
+    } else if (name == "forbidden") {
+        return edge.data["forbidden"] ?? false;
     }
     throw new Error(`Property ${name} is not implemented for GraphEdge`);
 }
@@ -422,7 +487,7 @@ class ReverseGraphEdgeRef implements GraphEdge {
         return this.ref;
     }
     traversable() {
-        if (!this.source.traversable || !this.target.traversable) return false;
+        if (!this.source.traversable || !this.target.traversable || this.data["forbidden"]) return false;
         return this.ref.isBidirectional || this.ref.data["flipped"];
     }
     getId(): string {
@@ -435,8 +500,8 @@ class ReverseGraphEdgeRef implements GraphEdge {
     getProp(name: string) {
         return getEdgeProperty(this, name);
     }
-    setProp(name: string, value: any): void {
-        setEdgeProperty(this, name, value);
+    setProp(name: string, value: any): boolean {
+        return setEdgeProperty(this, name, value);
     }
     delete(): void {
         this.source.graph.removeEdge(this);
@@ -470,8 +535,8 @@ export class GraphEdgeSimple implements GraphEdge {
     getProp(name: string) {
         return getEdgeProperty(this, name);
     }
-    setProp(name: string, value: any): void {
-        setEdgeProperty(this, name, value);
+    setProp(name: string, value: any): boolean {
+        return setEdgeProperty(this, name, value);
     }
     delete(): void {
         this.source.graph.removeEdge(this);
@@ -511,7 +576,7 @@ export class GraphEdgeSimple implements GraphEdge {
     }
 
     traversable(): boolean {
-        if (!this.source.traversable || !this.target.traversable) return false;
+        if (!this.source.traversable || !this.target.traversable || this.data["forbidden"]) return false;
         return this.isBidirectional || !this.data["flipped"];
     }
 
@@ -569,7 +634,7 @@ export class GraphNode implements EditableGraphComponent {
             {name: "is_goal", type: "boolean", value: this._graph.endNode?.id == this.id, trigger: true},
             {name: "h", type: "number", value: this.heuristic},
             {name: "traversable", type: "boolean", value: this.traversable},
-            {name: "highlighted", type: "boolean", value: this.data["highlighted"], hidden: true}
+            {name: "highlighted", type: "boolean", value: this.data["highlighted"] ?? false, hidden: false}
         ];
         if (this._graph instanceof GridGraph) {
             result.push({name: "x", type: "number", value: this.x, fixed: true});
@@ -584,14 +649,14 @@ export class GraphNode implements EditableGraphComponent {
         if (name == "label") return this.data["label"] ?? this.id;
         if (name == "h") return this.heuristic;
         if (name == "traversable") return this.traversable;
-        if (name == "highlighted") return this.data["highlighted"];
+        if (name == "highlighted") return this.data["highlighted"] ?? false;
         if (this._graph instanceof GridGraph) {
             if (name == "x") return this.x;
             if (name == "y") return this.y;
         }
         throw new NotImplementedError(`Property ${name} is not implemented for GraphNode`);
     }
-    setProp(name: string, value: any): void {
+    setProp(name: string, value: any): boolean {
         let setAnalysis = canSetProps(this.properties, {[name]: value});
         if (!setAnalysis.success) throw new Error(setAnalysis.errors.join("\n"));
         
@@ -610,8 +675,9 @@ export class GraphNode implements EditableGraphComponent {
         } else if (name == "highlighted") {
             this.data["highlighted"] = value;
         } else {
-            throw new NotImplementedError(`Property ${name} can not be set for GraphNode`);
+            return false;
         }
+        return true;
     }
 
     delete(): void {

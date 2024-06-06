@@ -6,6 +6,7 @@ export interface ItemProperty {
     trigger?: boolean;
     options?: any[];
     hidden?: boolean;
+    dynamic?: boolean;
     check?: (value: any) => boolean;
 }
 
@@ -21,7 +22,7 @@ export interface EditableComponent {
     get properties(): ItemProperty[];
     
     getProp(name: string): any;
-    setProp(name: string, value: any): void;
+    setProp(name: string, value: any): boolean;
 }
 
 export function canSetProps(properties: ItemProperty[], values: Record<string, any>): {success: boolean, errors: string[]} {

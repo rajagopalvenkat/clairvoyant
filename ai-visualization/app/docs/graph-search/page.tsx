@@ -96,26 +96,34 @@ export default function GraphSearchDocs() {
                     <DocsFunction clazzName="Graph" functionName="getAdjacentNodes" args={[
                         {name: "node", type: GraphNodeType}
                     ]} returnType={new GenericDocType(ConstDocGenerator, [GraphNodeType])}>
-                        <p>This allows you to obtain an array of all nodes which are accessible from one given node.</p>
+                        <p>This allows you to iterate over all nodes which are accessible from one given node.</p>
                     
                         <p>Note: if multiple traversable edges connect the nodes, the generator will generate duplicate entries.</p>
                     </DocsFunction>
-                    <DocsFunction clazzName="Graph" functionName="getAdjacentData" args={[
-                        {name: "node", type: GraphNodeType}
-                    ]} returnType={new GenericDocType(ConstDocGenerator, [new TupleArrayDocType([GraphNodeType, ConstDocNumber])])}>
-                        <p>This function is similar to <DocsRef refs="Graph.getAdjacentNodes">getAdjacentNodes</DocsRef>, but also gives you the weight of the edge one would have to traverse to reach the target node.</p>
+                    <DocsFunction clazzName="Graph" functionName="getAdjacentEdges" args={[
+                        {name: "node", type: GraphNodeType},
+                        {name: "includeUntraversable", type: ConstDocBoolean, default: false}
+                    ]} returnType={new GenericDocType(ConstDocGenerator, [GraphEdgeType])}>
+                        <p>This allows you to iterate over all edges that originate from a given node.</p>
                     
                         <p>Note: if multiple traversable edges connect the nodes, the generator will generate duplicate entries, with potentially differing weights.</p>
+
+                        <p>If <code>includeUntraversable</code> is set to <code>true</code>, the result will include edges (including virtual edges) which cannot be traversed.</p>
                     </DocsFunction>
-                    <DocsFunction clazzName="Graph" functionName="getReverseAdjacentNodes" args={[
+                    <DocsFunction clazzName="Graph" functionName="getIncomingNodes" args={[
                         {name: "node", type: GraphNodeType}
                     ]} returnType={new GenericDocType(ConstDocGenerator, [GraphNodeType])}>
-                    <p>Functions just like <DocsRef refs="Graph.getAdjacentNodes">getAdjacentData</DocsRef>, but uses reversed edges.</p>
+                        <p>Functions just like <DocsRef refs="Graph.getAdjacentNodes">getAdjacentNodes</DocsRef>, but uses reversed edges.</p>
+
+                        <p>In practice, this means one obtains the nodes that can directly reach the given node, as opposed to the reciprocal case.</p>
                     </DocsFunction>
-                    <DocsFunction clazzName="Graph" functionName="getReverseAdjacentData" args={[
-                        {name: "node", type: GraphNodeType}
-                    ]} returnType={new GenericDocType(ConstDocGenerator, [new TupleArrayDocType([GraphNodeType, ConstDocNumber])])}>
-                        <p>Functions just like <DocsRef refs="Graph.getAdjacentData">getAdjacentData</DocsRef>, but uses reversed edges.</p>
+                    <DocsFunction clazzName="Graph" functionName="getIncomingEdges" args={[
+                        {name: "node", type: GraphNodeType},
+                        {name: "includeUntraversable", type: ConstDocBoolean, default: false}
+                    ]} returnType={new GenericDocType(ConstDocGenerator, [GraphEdgeType])}>
+                        <p>Functions just like <DocsRef refs="Graph.getAdjacentEdges">getAdjacentEdges</DocsRef>, but uses reversed edges.</p>
+
+                        <p>In practice, this means one obtains the edges whose <DocsRef refs="GraphEdge.target">target</DocsRef> is the given node, as opposed to the <DocsRef refs="GraphEdge.source">source</DocsRef>.</p>
                     </DocsFunction>
                     <DocsFunction clazzName="Graph" functionName="getNodeById" args={[
                         {name: "nodeId", type: ConstDocString}

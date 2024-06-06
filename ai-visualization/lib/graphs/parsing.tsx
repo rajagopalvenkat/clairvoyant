@@ -77,7 +77,7 @@ export function genericFromGraphNotation(lines: string[]): GenericGraph {
         let parsedCmd = parseCommand(line, i);
         if (parsedCmd === undefined) continue;
         let {cmd, args, opts, data} = parsedCmd;
-        console.log(`Parsed command: ${cmd} with args ${args} and opts ${opts}`)
+        //console.log(`Parsed command: ${cmd} with args ${args} and opts ${opts}`)
         switch (cmd) {
             case "NODE":
                 ensureArgsLength(args, 1, "node setup", i, cmd);

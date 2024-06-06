@@ -57,6 +57,14 @@ export function PropertyEditor({property, onChange}: {
         }
         onChange(floatValue);
     }, [onChange])
+    let onChangeDynamicEnsureFloat = useCallback((value: string) => {
+        let floatValue = parseFloat(value);
+        setInternalValue(value);
+        if (isNaN(floatValue)) {
+            return;
+        }
+        onChange(floatValue);
+    }, [onChange])
 
     // Update internal value when it is externally changed
     useEffect(() => {
@@ -74,14 +82,24 @@ export function PropertyEditor({property, onChange}: {
                 </Select>
             )
         }
+        if (property.dynamic) {
+            return (
+                <input type="text" value={internalValue} onChange={(e) => onChange(e.target.value)} />
+            )
+        }
         return (
             <>
-                <input type="text" disabled={property.fixed} value={internalValue} onChange={(e) => setInternalValue(e.target.value)} />
+                <input type="text" value={internalValue} onChange={(e) => setInternalValue(e.target.value)} />
                 <PropertySetButton property={property} internalValue={internalValue} onPress={() => onChange(internalValue)} />
             </>
         )
     }
     if (property.type === "number") {
+        if (property.dynamic) {
+            return (
+                <input type="number" value={internalValue} onChange={(e) => onChangeDynamicEnsureFloat(e.target.value)} />
+            )
+        }
         return (
             <>
                 <input type="number" disabled={property.fixed} value={internalValue} onChange={(e) => setInternalValue(e.target.value)} />
