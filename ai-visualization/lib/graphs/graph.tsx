@@ -19,9 +19,17 @@ export const ADJACENT_DELTAS_ORTHO: [number, number][] = [
 ];
 export const ADJACENT_DELTAS: [number, number][] = [
     [0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]
-]
+];
 
 import { genericFromGraphNotation, gridGraphFromNotation, notationFromGenericGraph, notationFromGridGraph } from "./parsing";
+
+export interface GraphUIContext {
+    heldNode?: GraphNode;
+    heldEdge?: GraphEdge;
+    hoveredNode?: GraphNode;
+    hoveredEdge?: GraphEdge;
+    draggingNode?: GraphNode;
+}
 
 export abstract class Graph implements EditableComponent {
     protected _nodeLookup = new Map<string, GraphNode>(); // Used for data/existence access
@@ -33,7 +41,10 @@ export abstract class Graph implements EditableComponent {
     protected _endNode: GraphNode | null = null;
     protected _commandHandler: CommandHandler<Graph> = new CommandHandler<Graph>();
     protected _searchResult: string = "";
-    
+    public defaultBidirectional: boolean = false;
+    public physicsEnabled: boolean = true;
+    public context: GraphUIContext = {};
+
     get isDirty() {return this.isDirtyLookup || this.isDirtyRender;}
     get dirtyRender() {return this.isDirtyRender}
     get dirtyLookup() {return this.isDirtyLookup}
@@ -46,6 +57,8 @@ export abstract class Graph implements EditableComponent {
         return [
             {name: "start", type: "string", value: this.startNode?.id},
             {name: "end", type: "string", value: this.endNode?.id},
+            {name: "physics_enabled", type: "boolean", value: this.physicsEnabled},
+            {name: "default_bidirectional", type: "boolean", value: this.defaultBidirectional, description: "Whether to make newly created edges bidirectional by default"}
         ]
     }
     getProp(name: string) {
@@ -66,6 +79,10 @@ export abstract class Graph implements EditableComponent {
             let n = this.getNodeById(value);
             if (n == undefined) throw new Error(`Node ${value} does not exist in the graph.`);
             this.endNode = n;
+        } else if (name == "default_bidirectional") {
+            this.defaultBidirectional = value;
+        } else if (name == "physics_enabled") {
+            this.physicsEnabled = value;
         } else {
             return false;
         }
@@ -332,11 +349,9 @@ export class GridGraph extends Graph {
         if (super.setProp(name, value)) return true;
 
         if (name == "width") {
-            throw new NotImplementedError("Changing the width of a grid graph");
-            this.width = value;
+            this.setDimensions(value, this.height);
         } else if (name == "height") {
-            throw new NotImplementedError("Changing the height of a grid graph");
-            this.height = value;
+            this.setDimensions(this.width, value);
         } else if (name == "diagonal_weights") {
             this.diagonalWeights = value;
             this.updateAllTraversableEdges();
@@ -395,6 +410,32 @@ export class GridGraph extends Graph {
 
     stringify(): string {
         return notationFromGridGraph(this);
+    }
+
+    private setDimensions(newWidth: number, newHeight: number) {
+        let nodes = this.getAllNodes();
+        let nodesToRemove = nodes.filter(n => n.x >= newWidth || n.y >= newHeight);
+        // Initial check
+        for (let node of nodesToRemove) {
+            if (node.id == this.startNode?.id || node.id == this.endNode?.id) {
+                throw new Error("Cannot remove start or end node when resizing the grid graph.");
+            }
+        }
+        // Add new nodes
+        for (let x = 0; x < newWidth; x++) {
+            for (let y = 0; y < newHeight; y++) {
+                if (this.getNodeByCoords(x, y) == undefined) {
+                    this.createNode(x, y);
+                }
+            }
+        }
+        // Remove bad nodes
+        for (let node of nodesToRemove) {
+            this.removeNode(node);
+        }
+        this.width = newWidth;
+        this.height = newHeight;
+        this.updateAllTraversableEdges();
     }
 }
 
@@ -701,7 +742,9 @@ export class GraphNode implements EditableGraphComponent {
             if (!goal) return 0;
             let dx = Math.abs(this.x - goal.x);
             let dy = Math.abs(this.y - goal.y);
-            return Mathlib.distanceWithDiagonalCost([dx, dy], (this._graph as GridGraph).diagonalWeights);
+            let diagWeights = (this._graph as GridGraph).diagonalWeights;
+            let effectiveDiagonalCost = diagWeights  >= 0 ? diagWeights : Number.POSITIVE_INFINITY;
+            return Mathlib.distanceWithDiagonalCost([dx, dy], effectiveDiagonalCost);
         }
         return 0;
     }

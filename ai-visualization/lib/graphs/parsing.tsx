@@ -216,9 +216,9 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
 export function notationFromGridGraph(graph: GridGraph): string {
     let lines = [`GRID ${graph.width}x${graph.height}`];
     //throw new NotImplementedError("Generic Graph Stringification");
-    for (let x = 0; x < graph.width; x++) {
+    for (let y = 0; y < graph.height; y++) {
         let nodeReprs: string[] = []
-        for (let y = 0; y < graph.height; y++) {
+        for (let x = 0; x < graph.width; x++) {
             let node = graph.getNodeByCoords(x, y);
             if (!node) {
                 nodeReprs.push(`?${GridGraph.idFromCoords(x, y)}`);
@@ -228,11 +228,19 @@ export function notationFromGridGraph(graph: GridGraph): string {
         }
         lines.push(nodeReprs.join(" "));
     }
+    lines.push(`DIAGONAL ${getDiagonalWeightName(graph.diagonalWeights)}`);
     if (graph.startNode)
         lines.push(`START ${graph.startNode.x} ${graph.startNode.y}`);
     if (graph.endNode)
         lines.push(`GOAL ${graph.endNode.x} ${graph.endNode.y}`);
     return lines.join("\n");
+}
+
+export function getDiagonalWeightName(weight: number): string {
+    for (let [name, value] of Object.entries(defaultDiagWeightNames)) {
+        if (value == weight) return name;
+    }
+    return weight.toString();
 }
 
 export function notationFromGenericGraph(graph: GenericGraph): string {

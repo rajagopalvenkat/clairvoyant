@@ -1,11 +1,11 @@
-import { Graph, GridGraph, GenericGraph, GraphNode, EditableGraphComponent, GraphEdge } from "@/lib/graphs/graph"
+import { Graph, GridGraph, GenericGraph, GraphNode, EditableGraphComponent, GraphEdge, GraphEdgeSimple } from "@/lib/graphs/graph"
 import { renderValue } from "@/lib/strings/pretty"
 import { useCallback, useEffect, useState } from "react";
 import VisGraph, { GraphData, Options as VisGraphOptions } from "react-vis-graph-wrapper"
 import Stepper from "./stepper";
 import { Font, NodeOptions } from "vis-network";
+import * as vis from 'vis-network'
 import { colorWithAlpha } from "@/lib/utils/colors";
-import "./graphView.css"
 import { buttonStyleClassNames, dangerButtonStyleClassNames, getButtonStyleClassNamesForColor } from "@/lib/statics/styleConstants";
 import { PropertyInspector } from "@/app/components/data/propertyEditor";
 import { ensureError } from "@/lib/errors/error";
@@ -13,6 +13,9 @@ import { toast } from "react-toastify";
 import { showConfirmation } from "@/app/components/dialogs/comfirm";
 import { showInspectorDialog } from "@/app/components/dialogs/inspectorDialog";
 import { ItemProperty } from "@/lib/utils/properties";
+import { GraphEvents } from './graphView.d';
+
+import "./graphView.css"
 
 const edgeScaleFactor = 2;
 function getVisOptions(graph: Graph | null = null): VisGraphOptions {
@@ -38,6 +41,9 @@ function getVisOptions(graph: Graph | null = null): VisGraphOptions {
             }
         },
         height: "100%",
+        interaction: {
+            hover: true
+        }
     }
     if (graph instanceof GridGraph) {
         base.physics = {
@@ -52,7 +58,7 @@ function getVisOptions(graph: Graph | null = null): VisGraphOptions {
     if (graph instanceof GenericGraph) {
         base.edges!.smooth = {
             enabled: true,
-            type: "continuous",
+            type: "dynamic",
             roundness: 0.5
         }
         base.physics = {
@@ -94,16 +100,26 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
             break;      
     } 
 
-
     let traversabilityAlpha = node.traversable ? 0xff : 0x70;
     c = colorWithAlpha(c, traversabilityAlpha);
     let borderColor = node.data["highlighted"] ? "#ff0000" : c;
     result.borderWidth = node.data["highlighted"] ? 3 : 1;
-    result.color = {border: borderColor, background: c};
+    let held = node.graph.context.heldNode?.id == node.id;
+    let hovered = node.graph.context.hoveredNode?.id == node.id;
+    result.fixed = held;
+    if (held) {
+        borderColor = "#00ff00"; 
+        result.borderWidth *= 2;
+    } else if (hovered) {
+        borderColor = "#0000ff";
+    }
+    result.color = {border: borderColor, background: c, highlight: {border: borderColor}};
     result.font = {
         "color": colorWithAlpha((globals.nodes!.font! as Font).color!, traversabilityAlpha),
         "strokeColor": colorWithAlpha((globals.nodes!.font! as Font).strokeColor!, traversabilityAlpha),
     };
+
+    result.physics = node.graph?.physicsEnabled && node.graph.context.draggingNode != node; 
 
     if (node.graph instanceof GridGraph) {
         result.shape = "box";
@@ -179,18 +195,18 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
     totalSteps: number,
     onGraphChanged: (graph: Graph) => void,
     stepHandler: (step: number) => void,
-    }) {
+}) {
     const stringifySteps = () => {
         return `${stepIndex}/${totalSteps}`
     }
 
     let [visGraphData, setVisGraphData] = useState<GraphData>({nodes: [], edges: []});
     let [visGraphOptions, setVisGraphOptions] = useState(getVisOptions(graph));
+    let [visNetwork, setVisNetwork] = useState<vis.Network | undefined>(undefined);
 
     const renderGraph = useCallback(() => {
         if (graph) {
             let allGraphEdges = graph.getAllEdges();
-            let tempIndex = new Map(allGraphEdges.map((edge, index) => [index, edge]));
             setVisGraphData({
                 nodes: graph.getAllNodes().map((node, _idx) => {
                     return {id: node.id, label: node.getProp("label"), ...getNodeAttributes(node, visGraphOptions)}
@@ -221,7 +237,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
         // Using effect to ensure that the graph is re-rendered after the step is handled
     }, [stepHandler])
     
-    const createNodeRequested = useCallback(async () => {
+    const createNodeRequested = useCallback(async (options: {x?: number, y?: number} = {}) => {
         if (!graph) {
             toast.error("No valid graph loaded."); return;
         }
@@ -236,25 +252,25 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
         if (graph.getNodeById(newData.id)) {
             toast.error("Node with that ID already exists."); return;
         }
-        let newNode = new GraphNode(graph, newData.id);
+        let newNode = new GraphNode(graph, newData.id, options.x ?? 0, options.y ?? 0);
         graph.addNode(newNode);
         graphChangedCallback(graph);
     }, [graph, graphChangedCallback])
 
     //console.log(visGraphData);
     const [selectedComponents, setSelectedComponents] = useState([] as EditableGraphComponent[]);
-    const visGraphEvents = {
-        select: (event: any) => {
+    const visGraphEvents: GraphEvents = {
+        select: (event) => {
             if (!graph) return;
             var { nodes, edges } = event;
-            let selectedNodes = nodes.map((node: string) => graph.getNodeById(node)!);
+            let selectedNodes = nodes.map((node: string | number) => graph.getNodeById(node as string)!);
             if (selectedNodes.length > 0) { setSelectedComponents(selectedNodes); return; }
-            else {setSelectedComponents(edges.map((edge: number) => graph.getEdgeById(edge)!))};
+            else {setSelectedComponents(edges.map((edge: string | number) => graph.getEdgeById(edge as number)!))};
         },
-        doubleClick: (event: any) => {
+        doubleClick: (event) => {
             if (!graph) return;
-            var { nodes, edges } = event;
-            let selectedNodes: GraphNode[] = nodes.map((node: string) => graph.getNodeById(node)!);
+            var { nodes, edges, pointer } = event;
+            let selectedNodes: GraphNode[] = nodes.map((node: string | number) => graph.getNodeById(node as string)!);
             if (selectedNodes.length > 0) {
                 for (let node of selectedNodes) {
                     if (node) {
@@ -264,7 +280,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                 }
             } else if (selectedNodes.length == 0 && edges.length > 0) {
                 for (let edgeId of edges) {
-                    let edge = graph.getEdgeById(edgeId);
+                    let edge = graph.getEdgeById(edgeId as number);
                     if (edge) {
                         edge.setProp("forbidden", !edge.getProp("forbidden"));
                     }
@@ -273,9 +289,52 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
             } else {
                 // double click on empty space
                 if (graph instanceof GenericGraph) {
-                    createNodeRequested();
+                    createNodeRequested({x: pointer.canvas.x, y: pointer.canvas.y});
                 }
             }
+        },
+        hold: (event) => {
+            if (!graph) return;
+            //toast.info("Hold event triggered for node " + event.nodes[0] + " and edge " + event.edges[0]);
+            if (event.nodes.length > 0) { graph.context.heldNode = graph.getNodeById(event.nodes[0] as string)}
+            else if (event.edges.length > 0) { graph.context.heldEdge = graph.getEdgeById(event.edges[0] as number)}
+            graphChangedCallback(graph);
+        },
+        hoverEdge(event) {
+            if (!graph) return;
+            graph.context.hoveredEdge = graph.getEdgeById(event.edge as number);
+            graphChangedCallback(graph);
+        },
+        hoverNode(event) {
+            if (!graph) return;
+            graph.context.hoveredNode = graph.getNodeById(event.node as string);
+            graphChangedCallback(graph);
+        },
+        blurEdge(event) {
+            if (!graph) return;
+            graph.context.hoveredEdge = undefined;
+            graphChangedCallback(graph);
+        },
+        blurNode(event) {
+            if (!graph) return;
+            graph.context.hoveredNode = undefined;
+            graphChangedCallback(graph);
+        },
+        dragStart: (event) => {
+            if (!graph) return;
+            graph.context.draggingNode = event.nodes.length == 0 ? undefined : graph.getNodeById(event.nodes[0] as string);
+            graphChangedCallback(graph);
+        },
+        release: (event) => {
+            if (!graph) return;
+            if (graph.context.heldNode && graph.context.hoveredNode) {
+                let edge = new GraphEdgeSimple(graph.getNextEdgeIdentifier(), graph.context.heldNode, graph.context.hoveredNode, graph.getProp("default_bidirectional"));
+                graph.addEdge(edge);
+            }
+            graph.context.draggingNode = undefined;
+            graph.context.heldEdge = undefined;
+            graph.context.heldNode = undefined;
+            graphChangedCallback(graph);
         }
     }
 
@@ -291,8 +350,8 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                 graph={visGraphData}
                 options={visGraphOptions}
                 events={visGraphEvents}
-                getNetwork={network => {
-                    //  if you want access to vis.js network api you can set the state in a parent component using this property
+                getNetwork={(network: vis.Network) => {
+                    setVisNetwork(network);
                 }}
             ></VisGraph>
             <div className={`graph-helper bg-secondary-100 dark:bg-secondary-900 rounded-xl px-2 py-1`}>
@@ -306,7 +365,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                     }
                 }} />
                 <div className={`${genericOnly} flex flex-col items-end`}>
-                    <button className={`${getButtonStyleClassNamesForColor("primary")} px-2 py-1 rounded-xl`} onClick={createNodeRequested}>Create Node</button>
+                    <button className={`${getButtonStyleClassNamesForColor("primary")} px-2 py-1 rounded-xl`} onClick={() => createNodeRequested()}>Create Node</button>
                 </div>
             </div>
             <div className={`edit-menu bg-secondary-100 dark:bg-secondary-900 rounded-xl px-2 py-1 ${hideIfNothingSelected}`}>

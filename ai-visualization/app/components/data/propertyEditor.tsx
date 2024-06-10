@@ -73,18 +73,20 @@ export function PropertyEditor({property, onChange}: {
 
     if (property.type === "string") {
         if (property.options) {
+            let formattedOptions = property.options.map(n => {return {value: n, label: n}});
             return (
                 <Select unstyled className="" classNames={{
                     control: (state) => {return `${buttonStyleClassNames} rounded pl-2 border-solid border-2 border-secondary-50 dark:border-secondary-950`}, 
                     option: (state) => {return `${buttonStyleClassNames} p-1`}}}
-                    options={property.options.map(n => {return {value: n, label: n}})}
+                    options={formattedOptions}
+                    defaultValue={property.value}
                     onChange={e => {onChange(e?.value)}}>
                 </Select>
             )
         }
-        if (property.dynamic) {
+        if (property.dynamic || property.fixed) {
             return (
-                <input type="text" value={internalValue} onChange={(e) => onChange(e.target.value)} />
+                <input type="text" disabled={property.fixed} value={internalValue} onChange={(e) => onChange(e.target.value)} />
             )
         }
         return (

@@ -7,6 +7,7 @@ export interface ItemProperty {
     options?: any[];
     hidden?: boolean;
     dynamic?: boolean;
+    description?: string;
     check?: (value: any) => boolean;
 }
 
@@ -14,6 +15,12 @@ export interface ItemPropertyChange<T> {
     property: string;
     oldValue: any;
     newValue: any;
+    target: T;
+}
+
+export interface ItemPropertySet<T> {
+    property: string;
+    value: any;
     target: T;
 }
 

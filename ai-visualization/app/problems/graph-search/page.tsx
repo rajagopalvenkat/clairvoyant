@@ -42,7 +42,7 @@ export default function GraphSearchPage() {
             return {success: true, message: "Solution steps updated"};
         } catch (err) {
             let error = ensureError(err);
-            return {success: false, fault: "solver", message: error.message};
+            return {success: false, fault: "solver", message: `${error.stack ?? error.message}`};
         }
     };
 

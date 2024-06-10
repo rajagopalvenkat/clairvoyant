@@ -49,7 +49,7 @@ class HeuristicChecker {
                 let newDist = distances[current.id] + edge.weight;
                 // Note that the obtained edges are reversed, so the "target" and "source" are swapped.
                 // Alternatively, edge.reverse().target can be used.
-                let adj = edge.source.id;
+                let adj = edge.source;
                 if (newDist >= distances[adj.id]) {continue;}
                 distances[adj.id] = newDist;
                 queue.enqueue(adj, newDist);
@@ -72,13 +72,15 @@ class HeuristicChecker {
 
     checkConsistency(edges) {
         let inconsistent = [];
+        // We use a small epsilon to avoid floating point errors.
+        const EPSILON = 1e-6;
         for (let e of edges) {
             for (let subedge of [e, e.reverse()]) {
                 if (!subedge.traversable()) {continue;}
                 let h = subedge.source.heuristic;
                 let w = subedge.weight;
                 let h2 = subedge.target.heuristic;
-                if (h - w > h2) {
+                if (h - w - EPSILON > h2) {
                     inconsistent.push({edge: subedge, heuristic1: h, weight: w, heuristic2: h2});
                 }
             }

@@ -1,5 +1,5 @@
 import { Command, PropertyChangeCommand } from "../utils/commands";
-import { ItemPropertyChange } from "../utils/properties";
+import { ItemPropertySet } from "../utils/properties";
 import { EditableGraphComponent, Graph, GraphNode } from "./graph";
 
 const GSR_SUCCESS = "success";
@@ -27,6 +27,7 @@ export class GraphSearchResult {
 
 export class GraphSearchSolution {
     private __steps: GraphSearchResult[] = [];
+    private __propertyStore: Map<EditableGraphComponent, Record<string, any>> = new Map();
     constructor(graph: Graph | null = null) {
     }
 
@@ -63,10 +64,23 @@ export class GraphSearchSolution {
         this.__steps.push(new GraphSearchResult(GSR_EXPAND, cell, debugValue));
     }
     highlight(components: EditableGraphComponent[], debugValue: any = null): void {
-        this.alter(components.map(c => {return {target: c, property: "highlighted", oldValue: false, newValue: true}}), debugValue);
+        this.alter(components.map(c => {return {target: c, property: "highlighted", value: true}}), debugValue);
     }
-    alter(changes: ItemPropertyChange<EditableGraphComponent>[], debugValue: any = null): void {
-        this.__steps.push(new GraphSearchResult(GSR_NONE, null, debugValue, new PropertyChangeCommand(changes)));
+    unhighlight(components: EditableGraphComponent[], debugValue: any = null): void {
+        this.alter(components.map(c => {return {target: c, property: "highlighted", value: false}}), debugValue);
+    }
+    alter(changes: ItemPropertySet<EditableGraphComponent>[], debugValue: any = null): void {
+        if (!this.__propertyStore) this.__propertyStore = new Map();
+        let contextfulChanges = changes.map(change => {
+            let oldValue = this.__propertyStore.get(change.target)?.[change.property] ?? change.target.getProp(change.property);
+            return {oldValue: oldValue, newValue: change.value, property: change.property, target: change.target};            
+        });
+        for (let change of changes) {
+            let store = this.__propertyStore.get(change.target) ?? {};
+            store[change.property] = change.value;
+            this.__propertyStore.set(change.target, store);
+        }
+        this.__steps.push(new GraphSearchResult(GSR_NONE, null, debugValue, new PropertyChangeCommand(contextfulChanges)));
     }
     log(debugValue: any) {
         this.__steps.push(new GraphSearchResult(GSR_NONE, null, debugValue));

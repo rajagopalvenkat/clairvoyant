@@ -20,7 +20,6 @@ export function renderValue(value: any, prefix: string = "", suffix: string = ""
     else if (typeof value == "string") {
         extraClasses.push("text-code-string");
         let lines = value.split("\n");
-        console.log(lines);
         return (
             <span>
                 {prefix}

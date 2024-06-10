@@ -25,7 +25,7 @@ class BFSSolution {
             }
             for (let adj of neighbors) {
                 if (adj.id in this.visited) {continue;}
-                let message = "Visiting node " + adj.id + ", list of nodes to visit: [" + queue.map(n => n.id).join(", ") + "]";
+                let message = "Visiting node " + adj.id + ", list of nodes to expand: [" + queue.map(n => n.id).join(", ") + "]";
                 this.visit(adj, message) // Visit is a function in GraphSearchSolution that enables visualization
                 this.visited[adj.id] = true;
                 queue.push(adj);

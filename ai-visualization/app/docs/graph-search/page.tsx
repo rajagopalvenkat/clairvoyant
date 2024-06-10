@@ -14,6 +14,7 @@ const GraphNodeType = new IDocType("GraphNode", "", "GraphNode");
 const GraphEdgeType = new IDocType("GraphEdge", "", "GraphEdge");
 const GraphType = new IDocType("Graph", "", "Graph");
 const ItemPropertyChangeType = new IDocType("ItemPropertyChange", "", "ItemPropertyChange");
+const ItemPropertySetType = new IDocType("ItemPropertySet", "", "ItemPropertySet");
 
 export default function GraphSearchDocs() {
     return (
@@ -84,12 +85,11 @@ export default function GraphSearchDocs() {
                         <p>This will highlight the given components in the graphical interface</p>
                     </DocsFunction>
                     <DocsFunction clazzName="GraphSearchSolution" functionName="alter" args={[
-                        {name: "changes", type: docArrayOf(ItemPropertyChangeType)},
+                        {name: "changes", type: docArrayOf(ItemPropertySetType)},
                         {name: "debugValue", type: ConstDocAny, default: null}
                     ]}>
                         <p>This is an advanced way to interact with the properties of components</p>
                         <p>It allows you to alter any settable property of a component as part of the algorithm.</p>
-                        <DocsWarning>The renderer will trust whatever <code>oldValue</code> is, if it is inaccurate, it could cause odd behaviour when traversing through the algorithm backwards.</DocsWarning>
                     </DocsFunction>
                 </DocsClass>
                 <DocsClass clazzName={"Graph"}>
@@ -216,14 +216,11 @@ export default function GraphSearchDocs() {
                         <p>This function allows you to obtain the mirror of an edge. For regular edges, this returns the virtual edge. For virtual edges, this returns a regular edge.</p>
                     </DocsFunction>
                 </DocsClass>
-                <DocsInterface clazzName={"ItemPropertyChange"}>
+                <DocsInterface clazzName={"ItemPropertySet"}>
                     <DocsProperty property={{name: "property", type: ConstDocString}}>
                         <p>The name of the property that was changed.</p>
                     </DocsProperty>
-                    <DocsProperty property={{name: "oldValue", type: ConstDocAny}}>
-                        <p>The old value of the property.</p>
-                    </DocsProperty>
-                    <DocsProperty property={{name: "newValue", type: ConstDocAny}}>
+                    <DocsProperty property={{name: "value", type: ConstDocAny}}>
                         <p>The new value of the property.</p>
                     </DocsProperty>
                     <DocsProperty property={{name: "target", type: new UnionDocType([GraphNodeType, GraphEdgeType])}}>
