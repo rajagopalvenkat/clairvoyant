@@ -17,7 +17,8 @@ import { GraphEvents } from './graphView.d';
 
 import "./graphView.css"
 
-const edgeScaleFactor = 2;
+const minEdgeWidth = 1.5;
+const maxEdgeWidth = 15;
 function getVisOptions(graph: Graph | null = null): VisGraphOptions {
     let fontColor = "#7777ff";
     let fontStrokeColor = "#000000";
@@ -151,6 +152,7 @@ function getEdgeAttributes(edge: GraphEdge): Record<string, any> {
     if (!edge.traversable() && !edge.reverse().traversable()) {
         c = colorWithAlpha(c, 0x10);
     }
+    result.width = Math.min(maxEdgeWidth, minEdgeWidth + Math.max(0, Math.log2(edge.weight)));
     result.color = c;
     return result;
 }
@@ -213,7 +215,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                 }),
                 edges: allGraphEdges.map((edge, index) => {
                     let [source, target] = edge.data["flipped"] ? [edge.target.id, edge.source.id] : [edge.source.id, edge.target.id];
-                    return {id: edge.id, from: source, to: target, width: edge.weight * edgeScaleFactor, arrows: (edge.isBidirectional ? '' : 'to'), ...getEdgeAttributes(edge)}
+                    return {id: edge.id, from: source, to: target, arrows: (edge.isBidirectional ? '' : 'to'), ...getEdgeAttributes(edge)}
                 })
             });
             let oldOptions = visGraphOptions;
@@ -389,7 +391,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
             </div>
         </div>
         <div className="h-16">
-            {logData !== undefined && logData !== null ? (<div className="flex flex-row items-stretch rounded-xl border-2 p-1 border-primary-200 bg-primary-50 dark:border-primary-800 dark:bg-primary-950">
+            {logData !== undefined && logData !== null ? (<div className="flex max-h-16 overflow-auto flex-row items-stretch rounded-xl border-2 p-1 border-primary-200 bg-primary-50 dark:border-primary-800 dark:bg-primary-950">
                 {renderValue(logData)}
             </div>) : <></>}
         </div>
