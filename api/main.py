@@ -46,8 +46,11 @@ def get_algorithm(problem: str, algorithm: str):
 
 @app.route("/api/v1/<problem>/cases/<case>", methods=["GET"])
 def get_case(problem: str, case: str):
-    file = path.join("./problems", problem, "cases", f"{case}.txt")
-    if not path.exists(file): return NotFound("Problem or algorithm name not found.")
+    for ext in [".txt", ".js"]:
+        file = path.join("./problems", problem, "cases", f"{case}{ext}")
+        if path.exists(file): break
+    else:
+        return NotFound("Problem or algorithm name not found.")
     with open(file, "r") as f:
         content = f.readlines()
     return OK("".join(content))
