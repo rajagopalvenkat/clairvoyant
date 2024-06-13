@@ -11,7 +11,7 @@ export default function Canvas({draw, height, width, className}: {
         let canvas = canvasRef.current;
         if (canvas) {
             let ctx = canvas.getContext('2d');
-            if (ctx) {
+            if (ctx && draw) {
                 draw(ctx);
             }
         }
