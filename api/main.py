@@ -32,6 +32,7 @@ def get_cases(problem: str):
     result = []
     for file in listdir(directory):
         if file.endswith(".txt"): result.append(file[:-len(".txt")])
+        elif file.endswith(".js"): result.append(file[:-len(".js")])
     print(f"returning {json.dumps(result)}")
     return OK(result)
 

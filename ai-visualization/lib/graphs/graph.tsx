@@ -752,6 +752,21 @@ export class GraphNode implements EditableGraphComponent {
         if (this.data["traversable"] === false) return false;
         return true; 
     }
+
+    getSerializableData(): Record<string, any> {
+        let innerData: Record<string, any> = {};
+        if (this.style && Object.keys(this.style).length > 0)
+            innerData.style = this.style;
+        if (this.graph instanceof GenericGraph) {
+            if (!this.traversable) innerData.traversable = false;
+        }
+        for (let key of ["label", "h"]) {
+            if (this.data[key] != undefined) {
+                innerData[key] = this.data[key];
+            }
+        }
+        return innerData;
+    }
 }
 
 export interface GraphNodeStyle {

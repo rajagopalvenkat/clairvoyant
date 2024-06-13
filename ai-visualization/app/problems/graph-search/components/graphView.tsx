@@ -208,12 +208,11 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
 
     const renderGraph = useCallback(() => {
         if (graph) {
-            let allGraphEdges = graph.getAllEdges();
             setVisGraphData({
                 nodes: graph.getAllNodes().map((node, _idx) => {
                     return {id: node.id, label: node.getProp("label"), ...getNodeAttributes(node, visGraphOptions)}
                 }),
-                edges: allGraphEdges.map((edge, index) => {
+                edges: graph.getAllEdges().map((edge, index) => {
                     let [source, target] = edge.data["flipped"] ? [edge.target.id, edge.source.id] : [edge.source.id, edge.target.id];
                     return {id: edge.id, from: source, to: target, arrows: (edge.isBidirectional ? '' : 'to'), ...getEdgeAttributes(edge)}
                 })

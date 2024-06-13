@@ -1,11 +1,11 @@
 import * as vis from 'vis-network'
 
-export declare interface ISelectionEventParams {
+export declare type ISelectionEventParams = {
     nodes: vis.IdType[];
     edges: vis.IdType[];
 }
 
-export declare interface IClickEventParams extends ISelectionEventParams {
+export declare type IClickEventParams = ISelectionEventParams & {
     event: MouseEvent;
     pointer: {
         DOM: vis.Position;
@@ -23,33 +23,33 @@ export declare type ClickItem = {
     edge: vis.IdType; labelId: number;
 }
 
-export declare interface IClickItemEventParams extends IClickEventParams {
+export declare type IClickItemEventParams = IClickEventParams & {
     items: ClickItem[];
 }
 
-export declare interface IDeselectEventParams extends IClickEventParams {
+export declare type IDeselectEventParams = IClickEventParams & {
     previousSelection: ISelectionEventParams;
 }
 
-export declare interface IControlDragEventParams extends IClickEventParams {
+export declare type IControlDragEventParams = IClickEventParams & {
     controlEdge: {from: vis.IdType, to: vis.IdType}
 }
 
-export declare interface IZoomEventParams {
+export declare type IZoomEventParams = {
     direction: '+' | '-';
     scale: number;
     pointer: vis.Position;
 }
 
-export declare interface IStabilizedEventParams {
+export declare type IStabilizedEventParams = {
     iterations: number;
 }
 
-export declare interface IStabilizationEventParams extends IStabilizedEventParams {
+export declare type IStabilizationEventParams = IStabilizedEventParams & {
     total: number;
 }
 
-export declare interface IResizeEventParams {
+export declare type IResizeEventParams = {
     width: number;
     height: number;
     oldWidth: number;

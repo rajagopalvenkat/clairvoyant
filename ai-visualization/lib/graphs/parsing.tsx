@@ -1,5 +1,5 @@
 import { NotImplementedError, ParsingError } from "../errors/error";
-import { GenericGraph, Graph, GraphEdgeSimple, GraphEdgeStyle, GraphNode, GraphNodeStyle, GridGraph, defaultDiagWeightNames } from "./graph";
+import { GenericGraph, Graph, GraphEdge, GraphEdgeSimple, GraphEdgeStyle, GraphNode, GraphNodeStyle, GridGraph, defaultDiagWeightNames } from "./graph";
 
 function removeQuotes(s: string): string {
     if (s.startsWith("\"")) return s.substring(1, s.length - 1);
@@ -243,8 +243,44 @@ export function getDiagonalWeightName(weight: number): string {
     return weight.toString();
 }
 
+function getSafeId(id: string): string {
+    if (id.indexOf(" ") != -1) return `"${id}"`;
+    if (id.indexOf("\"") != -1) return `"${id.replace(/"/g, "\\\"")}"`;
+    return id;
+}
+
+function getEdgeSerializableData(edge: GraphEdge): Record<string, any> {
+    let innerData: Record<string, any> = {};
+    if (edge.style && Object.keys(edge.style).length > 0)
+        innerData.style = edge.style;
+    let serializedKeyValues: [string, any][] = [["flipped", false], ["w", 1], ["label", undefined], ["forbidden", false]];
+    for (let [key, defaultVal] of serializedKeyValues) {
+        if (edge.data[key] && edge.data[key] != defaultVal) innerData[key] = edge.data[key];
+    }    
+    return innerData;
+}
+
 export function notationFromGenericGraph(graph: GenericGraph): string {
     let lines = ["GENERIC"];
-    //throw new NotImplementedError("Generic Graph Stringification");
+    for (let node of graph.getAllNodes()) {
+        let dataStr = JSON.stringify(node.getSerializableData());
+        if (dataStr == "{}") dataStr = "";
+        lines.push(`NODE ${getSafeId(node.id)} ${dataStr}`.trimEnd());
+    }
+    lines.push("");
+    for (let edge of graph.getAllEdges()) {
+        // Handle bidirectionality
+        let opts = [];
+        if (edge.isBidirectional) {
+            opts.push("-b");
+        }
+
+        let dataStr = JSON.stringify(getEdgeSerializableData(edge));
+        if (dataStr == "{}") dataStr = "";
+        lines.push(`EDGE ${getSafeId(edge.source.id)} ${getSafeId(edge.target.id)} ${opts.join(" ")} ${dataStr}`.trimEnd());
+    }
+    lines.push("");
+    if (graph.startNode) lines.push(`START ${graph.startNode.id}`);
+    if (graph.endNode) lines.push(`GOAL ${graph.endNode.id}`);
     return lines.join("\n");
 }

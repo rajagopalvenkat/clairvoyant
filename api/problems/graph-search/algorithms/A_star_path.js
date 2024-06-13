@@ -46,12 +46,12 @@ class AStarSolution {
         distances[start.id] = 0;
         while (queue.size() > 0) {
             let current = queue.dequeue();
-            if (current.id === goal.id) {
-                break;
-            }
             let neighbors = Array.from(this.graph.getAdjacentEdges(current));
             let msg = `Expanding node ${current.id} with G = ${distances[current.id]}, neighbors ${neighbors.map(n => n.target.id).join(", ")}`;
             this.expand(current, msg);
+            if (current.id === goal.id) {
+                break;
+            }
             for (let edge of neighbors) {
                 let newDist = distances[current.id] + edge.weight;
                 let adj = edge.target;

@@ -9,26 +9,17 @@ export const API_URL = "http://localhost:5000/api/v1"
 export interface Problem {
     id: string,
     name: string,
-    href: string,
-    element: React.ReactNode
+    href: string
 }
 export const PROBLEMS : Record<string, Problem> = {
     graphsearch: {
         id: "graphsearch",
         name: "Graph Search",
         href: "/problems/graph-search",
-        element: (<GraphSearchPage></GraphSearchPage>)
     },
-    neuralnetworks: {
-        id: "neuralnetworks",
-        name: "Neural Networks",
-        href: "/problems/neutral-networks",
-        element: (<GraphSearchPage></GraphSearchPage>) // Change when created
-    },
-    geneticalgorithms: {
-        id: "geneticalgorithms",
-        name: "Genetic Algorithms",
-        href: "/problems/genetic-algorithms",
-        element: (<GraphSearchPage></GraphSearchPage>) // Change when created
+    adversarialsearch: {
+        id: "adversarialsearch",
+        name: "Adversarial Search",
+        href: "/problems/adversarial-search",
     }
 }
