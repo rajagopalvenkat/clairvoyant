@@ -1,4 +1,6 @@
+import { ensureError } from '@/lib/errors/error';
 import React from 'react';
+import { toast } from 'react-toastify';
 
 export default function Canvas({draw, height, width, className}: {
     draw: (ctx: CanvasRenderingContext2D) => void;
@@ -12,7 +14,12 @@ export default function Canvas({draw, height, width, className}: {
         if (canvas) {
             let ctx = canvas.getContext('2d');
             if (ctx && draw) {
-                draw(ctx);
+                try {
+                    draw(ctx);
+                } catch (err) {
+                    let error = ensureError(err);
+                    toast.error(error.message);
+                }
             }
         }
     }, [draw]);

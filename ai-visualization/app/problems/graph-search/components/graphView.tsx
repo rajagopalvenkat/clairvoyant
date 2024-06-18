@@ -13,7 +13,7 @@ import { toast } from "react-toastify";
 import { showConfirmation } from "@/app/components/dialogs/comfirm";
 import { showInspectorDialog } from "@/app/components/dialogs/inspectorDialog";
 import { ItemProperty } from "@/lib/utils/properties";
-import { GraphEvents } from './graphView.d';
+import { GraphEvents } from '../../../../lib/graphs/vis-events';
 
 import "./graphView.css"
 

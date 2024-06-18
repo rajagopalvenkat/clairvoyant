@@ -8,6 +8,7 @@ export interface ItemProperty {
     hidden?: boolean;
     dynamic?: boolean;
     description?: string;
+    display?: string;
     check?: (value: any) => boolean;
 }
 

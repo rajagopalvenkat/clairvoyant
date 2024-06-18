@@ -110,7 +110,7 @@ export abstract class Graph implements EditableComponent {
                 if (edge.isRef) continue;
                 allEdges.push(edge);
             }
-            this._edgeLookup.clear()
+            this._edgeLookup.clear();
             for (let edge of allEdges) {
                 this.addEdge(edge);
             }
@@ -119,6 +119,7 @@ export abstract class Graph implements EditableComponent {
 
     // Node Operations
     public addNode(node: GraphNode) {
+        if (this._nodeLookup.has(node.id)) throw new Error(`Node with id \"${node.id}\" already exists in the graph.`);
         this._nodeLookup.set(node.id, node);
         //console.log(JSON.stringify([...this._nodeLookup.entries()]));
         this.markDirtyRender();

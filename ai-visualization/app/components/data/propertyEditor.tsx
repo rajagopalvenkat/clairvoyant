@@ -23,9 +23,10 @@ export function PropertyField({property, onChange}: {
     property: ItemProperty,
     onChange: (value: any) => void,
 }) {
+    let displayName = property.display ?? property.name;
     return (
         <div className="flex flex-row items-center mb-1">
-            <label className="flex-grow text-secondary-800 dark:text-secondary-200 mr-3">{property.name}</label>
+            <label className="text-nowrap flex-grow text-secondary-800 dark:text-secondary-200 mr-3">{displayName}</label>
             <PropertyEditor property={property} onChange={onChange} />
         </div>
     )

@@ -1,0 +1,20 @@
+.game-inspector {
+    position: absolute;
+    right: 0;
+    top: 0;
+    margin: 0.5rem;
+}
+
+.position-inspector {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    margin: 0.5rem;
+}
+
+.controls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0.5rem;
+}

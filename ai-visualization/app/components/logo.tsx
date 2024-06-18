@@ -6,7 +6,7 @@ export default function Logo({height}: {height?: number}) {
     let h = height ?? 50;
     return (
         <Link href="/">
-            <Image src="/ClairvoyantLogoProgrammerArt.png" alt={APP_NAME} width={200 * h / 50} height={h} />
+            <Image src="/ClairvoyantLogoProgrammerArt.png" alt={APP_NAME} width={200 * h / 50} height={h} priority className="w-auto"/>
         </Link>
     )
 }

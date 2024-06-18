@@ -4,6 +4,7 @@ import { colorWithAlpha } from "@/lib/utils/colors";
 import { useEffect, useState } from "react"
 import VisGraph, { GraphData, Options as VisGraphOptions } from "react-vis-graph-wrapper"
 import { Font, NodeOptions } from "vis-network";
+import { GraphEvents } from "@/lib/graphs/vis-events";
 
 function getVisOptions(graph: Graph | null = null): VisGraphOptions {
     let fontColor = "#7777ff";
@@ -84,29 +85,81 @@ function getEdgeAttributes(edge: GraphEdge): Record<string, any> {
     return result;
 }
 
+function countChildren(node: GraphNode, visited: Set<string> = new Set()): number {
+    let count = 0;
+    for (let child of node.graph.getAdjacentNodes(node)) {
+        if (!visited.has(child.id)) {
+            visited.add(child.id);
+            count += 1 + countChildren(child, visited);
+        }
+    }
+    return count;
+}
 
-export default function TreeView({graph}: {
-    graph: Graph | null
+export default function TreeView({graph, onNodeSelected = (x) => {}}: {
+    graph: Graph | null,
+    onNodeSelected?: (node: GraphNode | null) => void
 }) {
     let [graphData, setGraphData] = useState<GraphData>({nodes: [], edges: []})
     let [graphOptions, setGraphOptions] = useState<VisGraphOptions>(getVisOptions(graph));
+    let [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         if (!graph || !graph.startNode) { return; }
 
         let visGraphOptions = getVisOptions(graph);
-        let distanceFromStart = dijsktra(graph, graph.startNode, false);
-        setGraphData({
-            nodes: graph.getAllNodes().map((node, _idx) => {
-                return {id: node.id, label: node.getProp("label"), level: distanceFromStart.get(node.id), ...getNodeAttributes(node, visGraphOptions)}
-            }),
-            edges: graph.getAllEdges().map((edge, index) => {
-                let [source, target] = edge.data["flipped"] ? [edge.target.id, edge.source.id] : [edge.source.id, edge.target.id];
-                return {id: edge.id, from: source, to: target, arrows: (edge.isBidirectional ? '' : 'to'), ...getEdgeAttributes(edge)}
-            })
-        })
+        let data: GraphData = {nodes:[], edges:[]};
+
+        let startPos = graph.startNode;
+        let q = [{node: startPos, distance: 0}];
+        while (q.length > 0) {
+            let {node, distance} = q.shift()!;
+            let label = node.getProp("label");
+            if (expandedNodes.has(node.id)) {
+                q.push(...[...graph.getAdjacentNodes(node)].map(n => ({node: n, distance: distance + 1})));
+            } else {
+                let children = countChildren(node);
+                label = `${label} (${children})`.trimStart();
+            }
+            data.nodes.push({id: node.id, label: label, level: distance, ...getNodeAttributes(node, visGraphOptions)});
+            for (let edge of graph.getIncomingEdges(node)) {
+                data.edges.push({id: edge.id, from: edge.source.id, to: edge.target.id, arrows: 'to', ...getEdgeAttributes(edge)});
+            }
+        }
+
+        setGraphData(data);
         setGraphOptions(visGraphOptions);
-    }, [graph])
+    }, [expandedNodes, graph])
+
+    let events: GraphEvents = {
+        click: (event) => {
+            
+        },
+        doubleClick: (event) => {
+            if (event.nodes.length <= 0) return;
+            let nodeId = event.nodes[0] as string;
+            if (expandedNodes.has(nodeId)) {
+                expandedNodes.delete(nodeId);
+            } else {
+                expandedNodes.add(nodeId);
+            }
+            setExpandedNodes(new Set(expandedNodes));
+        },
+        selectNode: (event) => {
+            if (event.nodes.length <= 0) return;
+            let nodeId = event.nodes[0] as string;
+            let node = graph?.getNodeById(nodeId);
+            if (!node) return;
+            onNodeSelected(node);            
+        },
+        deselectNode: (event) => {
+            onNodeSelected(null);
+        }
+    }
     
-    return <VisGraph graph={graphData} />
+    return <VisGraph 
+        graph={graphData} 
+        options={graphOptions}
+        events={events}
+    />
 }
