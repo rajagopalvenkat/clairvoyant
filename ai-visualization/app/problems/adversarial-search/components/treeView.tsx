@@ -1,10 +1,11 @@
 import { dijsktra } from "@/lib/graphs/algorithms"
 import { Graph, GraphEdge, GraphNode } from "@/lib/graphs/graph"
-import { colorWithAlpha } from "@/lib/utils/colors";
+import { colorLerp, colorWithAlpha } from "@/lib/utils/colors";
 import { useEffect, useState } from "react"
 import VisGraph, { GraphData, Options as VisGraphOptions } from "react-vis-graph-wrapper"
 import { Font, NodeOptions } from "vis-network";
 import { GraphEvents } from "@/lib/graphs/vis-events";
+import { AdversarialSearchPosition } from "@/lib/adversarial/adversarialCase";
 
 function getVisOptions(graph: Graph | null = null): VisGraphOptions {
     let fontColor = "#7777ff";
@@ -31,7 +32,20 @@ function getVisOptions(graph: Graph | null = null): VisGraphOptions {
         height: "100%",
         interaction: {
             hover: true
-        }
+        },
+        layout: { 
+            hierarchical: {
+                enabled: true,
+                levelSeparation: 120,
+                nodeSpacing: 30,
+                treeSpacing: 200,
+                blockShifting: true,
+                edgeMinimization: true,
+                parentCentralization: true,
+                direction: "UD",
+                sortMethod: "directed"
+            }
+        },
     }
     return base;
 };
@@ -49,18 +63,15 @@ function getColorByState(state: string | undefined): string {
 
 function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptions {
     let result : NodeOptions = {};
-    let c;
-    switch (node.graph.searchResult) {
-        case "success":
-            c = "#3333ff";
-            break;
-        case "failure":
-            c = "#ff3333";
-            break;
-        default:
-            c = getColorByState(node.data.state);
-            break;      
-    } 
+    let c = "#888888";
+    let pos : AdversarialSearchPosition = node.data["position"];
+    if (pos.isTerminal()) {
+        c = colorLerp("#ff0000", "#00ff00", (pos.getScore() / 2 + 0.5));
+    }
+
+    let shape = "ellipse";
+    if (node.id == node.graph.startNode?.id) { shape = "box"; }
+    result.shape = shape;
 
     let borderColor = node.data["highlighted"] ? "#ff0000" : c;
     result.borderWidth = node.data["highlighted"] ? 3 : 1;
@@ -70,7 +81,7 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
         "strokeColor": (globals.nodes!.font! as Font).strokeColor!,
     };
 
-    result.physics = node.graph?.physicsEnabled && node.graph.context.draggingNode != node; 
+    // result.physics = node.graph?.physicsEnabled && node.graph.context.draggingNode != node; 
 
     return result;
 }
@@ -82,6 +93,7 @@ function getEdgeAttributes(edge: GraphEdge): Record<string, any> {
         c = "#ff0000";
     }
     result.color = c;
+    result.label = edge.data["action"]["label"] ?? edge.data["action"]["name"] ?? "";
     return result;
 }
 
@@ -96,9 +108,10 @@ function countChildren(node: GraphNode, visited: Set<string> = new Set()): numbe
     return count;
 }
 
-export default function TreeView({graph, onNodeSelected = (x) => {}}: {
+export default function TreeView({graph, onNodeSelected = (x) => {}, renderKey}: {
     graph: Graph | null,
-    onNodeSelected?: (node: GraphNode | null) => void
+    onNodeSelected?: (node: GraphNode | null) => void,
+    renderKey: number
 }) {
     let [graphData, setGraphData] = useState<GraphData>({nodes: [], edges: []})
     let [graphOptions, setGraphOptions] = useState<VisGraphOptions>(getVisOptions(graph));
@@ -114,7 +127,7 @@ export default function TreeView({graph, onNodeSelected = (x) => {}}: {
         let q = [{node: startPos, distance: 0}];
         while (q.length > 0) {
             let {node, distance} = q.shift()!;
-            let label = node.getProp("label");
+            let label = ""; node.getProp("label");
             if (expandedNodes.has(node.id)) {
                 q.push(...[...graph.getAdjacentNodes(node)].map(n => ({node: n, distance: distance + 1})));
             } else {
@@ -126,10 +139,11 @@ export default function TreeView({graph, onNodeSelected = (x) => {}}: {
                 data.edges.push({id: edge.id, from: edge.source.id, to: edge.target.id, arrows: 'to', ...getEdgeAttributes(edge)});
             }
         }
-
+        console.log(data);
         setGraphData(data);
+        console.log(visGraphOptions);
         setGraphOptions(visGraphOptions);
-    }, [expandedNodes, graph])
+    }, [expandedNodes, graph, renderKey])
 
     let events: GraphEvents = {
         click: (event) => {

@@ -27,7 +27,7 @@ export default function GraphSearchPage() {
     let [debugData, setDebugData] = useState<any>(null);
     let [algoData, setAlgoData] = useState("");
     let [caseData, setCaseData] = useState("");
-    let [rerenderKey, setRerenderKey] = useState(0);
+    let [graphRenderKey, setGraphRenderKey] = useState(0);
     
     let [game, setGame] = useState<AdversarialSearchCase | null>(null);
     let [solver, setSolver] = useState<AdversarialSearchSolution | null>(null);
@@ -62,7 +62,7 @@ export default function GraphSearchPage() {
     }
 
     function initializeGame(game: AdversarialSearchCase, solver: AdversarialSearchSolution) {
-        setRerenderKey(0);
+        setGraphRenderKey(0);
         setShownPosition(solver.gameTree.startNode!.data.position);
     }
 
@@ -108,17 +108,18 @@ export default function GraphSearchPage() {
             curNode = nextNode;
         }
         console.log(solver);
-        setRerenderKey(rerenderKey + 1);
-    }, [game, solver, initialPosition, rerenderKey]);
+        setGraphRenderKey(graphRenderKey + 1);
+    }, [game, solver, initialPosition, graphRenderKey]);
 
     const onGamePropertyChange = useCallback((property: string, oldValue: any, newValue: any) => {
         if (property === "__expand") {
+            console.log(`Expanding ${shownPosition?.getId()}`);
             if (shownPosition) solver?.expand(shownPosition);
-            setRerenderKey(rerenderKey + 1);
+            setGraphRenderKey(graphRenderKey + 1);
             return;
         }
         game?.setProp(property, newValue);
-    }, [game, rerenderKey, shownPosition, solver]);
+    }, [game, graphRenderKey, shownPosition, solver]);
     const onPositionPropertyChange = useCallback((property: string, oldValue: any, newValue: any) => {
         shownPosition?.setProp(property, newValue);
     }, [shownPosition]);
@@ -171,7 +172,7 @@ export default function GraphSearchPage() {
                 })}></VDivider>
                 <div className="relative overflow-hidden flex flex-row p-3 m-2 rounded-md border-accent dark:border-accent-200 border-solid border flex-grow">
                     <div className="w-1/2 max-h-[calc(100dvh-110px)]">
-                        <TreeView key={rerenderKey} graph={solver?.gameTree ?? null} onNodeSelected={onNodeSelected}></TreeView>
+                        <TreeView renderKey={graphRenderKey} graph={solver?.gameTree ?? null} onNodeSelected={onNodeSelected}></TreeView>
                     </div>
                     <div className="relative w-1/2 max-h-[calc(100dvh-110px)] flex justify-center align-middle">
                         <Canvas className="max-h-full max-w-full" draw={positionRender} width={500} height={1000}></Canvas>

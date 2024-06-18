@@ -85,9 +85,17 @@
         ["middle-left", "middle-center", "middle-right"], 
         ["bottom-left", "bottom-center", "bottom-right"]
     ];
+    const posLabels = [
+        ["TL", "TC", "TR"],
+        ["ML", "MC", "MR"],
+        ["BL", "BC", "BR"]
+    ]
     
     function getPositionName(i, j) {
         return posNames[i][j];
+    }
+    function getPositionLabel(i, j) {
+        return posLabels[i][j];
     }
     
     class TicTacToe extends GameBase {
@@ -122,11 +130,14 @@
     
         /** @param {Position} position */
         getActions(position) {
+            if (position.isTerminal()) {
+                return [];
+            }
             let actions = [];
             for (let i = 0; i < 3; i++) {
                 for (let j = 0; j < 3; j++) {
                     if (position.squares[i][j] === " ") {
-                        actions.push({name: getPositionName(i, j), data: [i, j]});
+                        actions.push({name: getPositionName(i, j), label: getPositionLabel(i, j), data: [i, j]});
                     }
                 }
             }
