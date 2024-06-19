@@ -23,15 +23,31 @@
         // call and yield the result of expand() to interactively let the user expand nodes
         // depending on the user's expansion/time limit, expand() may yield empty expansions even if the node isn't terminal
         *runExpansion(node) {
-            // simple DFS traversal of the game tree.
-            let queue = [node];
-            while (queue.length > 0) {
-                let current = queue.shift();
-                let expansion = this.expand(current);
-                yield expansion;
-                for (let move of expansion.moves) {
-                    queue.push(move.position);
+            // iterative deepening approach
+            // This avoids having massive queues in memory, which end up slowing down the algorithm
+            // This is also a common approach in practice for memory reasons, though since visualizations require storing all positions, this isn't much of a benefit here.
+            let maxNodesFound = -1;
+            let maxDepthAllowed = 4;
+            let nodesFound = 0;
+            while (nodesFound > maxNodesFound) {
+                maxNodesFound = nodesFound;
+                nodesFound = 0;
+                for (let expansion of this.dfs(node, 0, maxDepthAllowed)) {
+                    yield expansion;
+                    nodesFound++;
                 }
+                maxDepthAllowed++;
+            }
+        }
+
+        *dfs(node, depth, maxDepth) {
+            if (node.isTerminal() || depth === maxDepth) {
+                return;
+            }
+            let expansion = this.expand(node);
+            yield expansion;
+            for (let move of expansion.moves) {
+                yield* this.dfs(move.position, depth + 1, maxDepth);
             }
         }
 
@@ -43,7 +59,7 @@
             return result;
         }
 
-        dfsMinimax(node, maximizingPlayer) {
+        dfsMinimax(node) {
             if (node.isTerminal()) {
                 return node.getScore();
             }
@@ -53,10 +69,20 @@
                 // or you can just return 0 to assume a draw
                 return 0;
             }
+            let currentPlayer = node.data["position"].getPlayer();
+            let maximizingPlayer;
+            if (currentPlayer == 1) {
+                maximizingPlayer = true;
+            } else if (currentPlayer == -1) {
+                maximizingPlayer = false;
+            } else {
+                throw new Error("Invalid player for minimax algorithm.");
+            }
+
             let bestScore = maximizingPlayer ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
             let bestMove = undefined;
             for (let move of node.data["moves"]) {
-                let score = this.dfsMinimax(move.position, !maximizingPlayer);
+                let score = this.dfsMinimax(move.position);
                 if (maximizingPlayer ? score > bestScore : score < bestScore) {
                     bestScore = score;
                     bestMove = move;

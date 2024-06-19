@@ -50,17 +50,6 @@ function getVisOptions(graph: Graph | null = null): VisGraphOptions {
     return base;
 };
 
-function getColorByState(state: string | undefined): string {
-    switch (state) {
-        case "visited":
-            return "#ffff00";
-        case "expanded":
-            return "#66ff66";
-        default:
-            return "#999999";
-    }
-}
-
 function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptions {
     let result : NodeOptions = {};
     let c = "#888888";
@@ -70,8 +59,14 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
     }
 
     let shape = "ellipse";
-    if (node.id == node.graph.startNode?.id) { shape = "box"; }
+    let player = pos.getPlayer();
+    if (player === 1) {
+        shape = "triangle";
+    } else if (player === -1) {
+        shape = "triangleDown";
+    }
     result.shape = shape;
+    result.size = 12;
 
     let borderColor = node.data["highlighted"] ? "#ff0000" : c;
     result.borderWidth = node.data["highlighted"] ? 3 : 1;
@@ -81,7 +76,12 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
         "strokeColor": (globals.nodes!.font! as Font).strokeColor!,
     };
 
-    // result.physics = node.graph?.physicsEnabled && node.graph.context.draggingNode != node; 
+    if (pos.style) {
+        for (let key in Object.keys(pos.style)) {
+            // We have to do this because typescript doesn't know that the key is a valid key of NodeOptions
+            (result as any)[key] = (pos.style as any)[key];
+        }
+    }
 
     return result;
 }
@@ -128,9 +128,10 @@ export default function TreeView({graph, onNodeSelected = (x) => {}, renderKey}:
         while (q.length > 0) {
             let {node, distance} = q.shift()!;
             let label = ""; node.getProp("label");
+            let pos : AdversarialSearchPosition = node.data["position"];
             if (expandedNodes.has(node.id)) {
                 q.push(...[...graph.getAdjacentNodes(node)].map(n => ({node: n, distance: distance + 1})));
-            } else {
+            } else if (!pos.isTerminal()) {
                 let children = countChildren(node);
                 label = `${label} (${children})`.trimStart();
             }
@@ -152,6 +153,10 @@ export default function TreeView({graph, onNodeSelected = (x) => {}, renderKey}:
         doubleClick: (event) => {
             if (event.nodes.length <= 0) return;
             let nodeId = event.nodes[0] as string;
+            let node = graph?.getNodeById(nodeId);
+            if (!node) return;
+            let pos : AdversarialSearchPosition = node.data["position"];
+            if (pos.isTerminal()) return;
             if (expandedNodes.has(nodeId)) {
                 expandedNodes.delete(nodeId);
             } else {

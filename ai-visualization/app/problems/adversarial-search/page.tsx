@@ -19,6 +19,11 @@ import "./adversarial-search.css";
 
 const defaultDraw = (ctx: CanvasRenderingContext2D) => {}
 
+type ExpansionGenerator = {
+    generator: Generator<AdversarialExpansion, void>,
+    initialPosition: AdversarialSearchPosition
+}
+
 export default function GraphSearchPage() {
     let [leftWidth, setLeftWidth] = useState(480);
     let [solHeight, setSolHeight] = useState(520);
@@ -31,6 +36,7 @@ export default function GraphSearchPage() {
     
     let [game, setGame] = useState<AdversarialSearchCase | null>(null);
     let [solver, setSolver] = useState<AdversarialSearchSolution | null>(null);
+    let [expansionGenerator, setExpansionGenerator] = useState<ExpansionGenerator | null>(null);
 
     // visualization
     let [initialPosition, setInitialPosition] = useState<AdversarialSearchPosition | null>(null);
@@ -75,11 +81,18 @@ export default function GraphSearchPage() {
         let initialPos = initialPosition ?? game.getInitialPosition();
         console.log(initialPos);
         solver.allowedExpansions = maxExpansions;
-        let generator = solver.runExpansion(initialPos);
+        let expander = expansionGenerator;
+        if (!expansionGenerator || expansionGenerator.initialPosition.getId() !== initialPos.getId()) {
+            expander = {
+                generator: solver.runExpansion(initialPos),
+                initialPosition: initialPos
+            }
+            setExpansionGenerator(expander);
+        }
         while (true) {
             let action : IteratorResult<AdversarialExpansion>;
             try {
-                action = generator.next();
+                action = expander!.generator.next();
             } catch (err) {
                 let error = ensureError(err);
                 toast.error(error.stack);

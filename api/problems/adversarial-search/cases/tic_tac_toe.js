@@ -78,6 +78,9 @@
         getScore() {
             return this.score;
         }
+        getPlayer() {
+            return this.next === "X" ? 1 : -1;
+        }
     }
     
     const posNames = [

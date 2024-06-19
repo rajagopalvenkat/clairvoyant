@@ -1,10 +1,13 @@
+import { NodeOptions } from "vis-network";
 import { EditableComponent } from "../utils/properties";
 
 export abstract class AdversarialSearchPosition implements EditableComponent {
     data: any;
+    style: NodeOptions | undefined;
     constructor() {
         console.log("Running base position constructor");
         this.data = {};
+        this.style = {};
     }
     get id(): string {
         console.log([this, this.getId()]);
@@ -29,6 +32,7 @@ export abstract class AdversarialSearchPosition implements EditableComponent {
     abstract render(ctx: CanvasRenderingContext2D): void;
     abstract isTerminal(): boolean;
     abstract getScore(): number;
+    abstract getPlayer(): number;
 }
 
 export abstract class AdversarialSearchCase implements EditableComponent {
@@ -102,4 +106,5 @@ export const requiredPositionMethods = [
     {name: "getScore", args: 0},
     {name: "render", args: 1},
     {name: "getId", args: 0},
+    {name: "getPlayer", args: 0},
 ]

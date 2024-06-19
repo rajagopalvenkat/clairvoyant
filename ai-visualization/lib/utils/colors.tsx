@@ -59,7 +59,7 @@ class Color {
 
 // Hex pad zero left (2)
 function hexpzl2(n: number): string { 
-    return n.toString(16).padStart(2, "0");
+    return Math.round(n).toString(16).padStart(2, "0");
 }
 
 export function colorWithAlpha(c: string, a: number): string {
