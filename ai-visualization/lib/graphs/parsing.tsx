@@ -55,7 +55,7 @@ function getNodesFromCoordArgs(graph: GridGraph, coordArgs: string[], phase: str
 const stmt_regex = /(?<cmd>[A-Z]+) +(?<args>( *("[^"]+"|\w+))+)(?<opts>( +-[\-a-zA-Z0-9]+)*)(?<data> *\{.+\})?/;
 const arg_regex = /"[^"]+"|\w+/g;
 function parseCommand(line: string, lineIdx: number): {cmd: string, args: string[], opts: string[], data: Object} | undefined {
-    if (line.trim() == "") return undefined;
+    if (line.trim() === "") return undefined;
     if (line.startsWith("#")) return undefined;
     const match = stmt_regex.exec(line);
     if (!match) throw invalidCommandSyntax(lineIdx);
@@ -176,7 +176,6 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
                 ensureArgsLength(args, 2, "node setup", i, cmd);
                 let node = getSingleNodeFromCoordArgs(result, args, "node setup", i, cmd);
                 [node.data, node.style] = splitDataAndStyle<GraphNodeStyle>(data);
-                result.addNode(node);
                 break;
             case "DIAGONAL":
                 ensureArgsLength(args, 1, "diagonal setting", i, cmd);
@@ -224,7 +223,7 @@ export function notationFromGridGraph(graph: GridGraph): string {
                 nodeReprs.push(`?${GridGraph.idFromCoords(x, y)}`);
                 continue;
             }
-            nodeReprs.push(node.data["traversable"] == 0 ? "0" : "1")
+            nodeReprs.push(node.data["traversable"] === 0 ? "0" : "1")
         }
         lines.push(nodeReprs.join(" "));
     }
@@ -238,7 +237,7 @@ export function notationFromGridGraph(graph: GridGraph): string {
 
 export function getDiagonalWeightName(weight: number): string {
     for (let [name, value] of Object.entries(defaultDiagWeightNames)) {
-        if (value == weight) return name;
+        if (value === weight) return name;
     }
     return weight.toString();
 }
@@ -264,7 +263,7 @@ export function notationFromGenericGraph(graph: GenericGraph): string {
     let lines = ["GENERIC"];
     for (let node of graph.getAllNodes()) {
         let dataStr = JSON.stringify(node.getSerializableData());
-        if (dataStr == "{}") dataStr = "";
+        if (dataStr === "{}") dataStr = "";
         lines.push(`NODE ${getSafeId(node.id)} ${dataStr}`.trimEnd());
     }
     lines.push("");
@@ -276,7 +275,7 @@ export function notationFromGenericGraph(graph: GenericGraph): string {
         }
 
         let dataStr = JSON.stringify(getEdgeSerializableData(edge));
-        if (dataStr == "{}") dataStr = "";
+        if (dataStr === "{}") dataStr = "";
         lines.push(`EDGE ${getSafeId(edge.source.id)} ${getSafeId(edge.target.id)} ${opts.join(" ")} ${dataStr}`.trimEnd());
     }
     lines.push("");

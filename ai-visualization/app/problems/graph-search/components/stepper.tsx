@@ -29,7 +29,7 @@ export default function Stepper({stepHandler, step, maxSteps}: {
 
     let sliderClasses: string[] = [];
     let globalClasses: string[] = [];
-    if (maxSteps == 0) {
+    if (maxSteps === 0) {
         sliderClasses.push("slider-disabled");
         globalClasses.push("opacity-50");
     }

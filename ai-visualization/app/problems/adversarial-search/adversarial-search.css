@@ -18,3 +18,19 @@
     left: 0;
     margin: 0.5rem;
 }
+
+.game-view {
+    position: absolute;
+    right: 0;
+    height: 100%;
+    width: 50%;
+    max-width: 500px;
+}
+
+.tree-inspector { 
+    position: absolute;
+    left: 0;
+    height: 100%;
+    width: 50%;
+    min-width: calc(100% - 500px);
+}

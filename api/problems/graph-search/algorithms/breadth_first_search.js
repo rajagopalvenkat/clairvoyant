@@ -20,7 +20,7 @@ class BFSSolution {
             let neighbors = Array.from(this.graph.getAdjacentNodes(current));
             let message = "Expanding node " + current.id + " with neighbors " + neighbors.map(n => n.id).join(", ");
             this.expand(current, message) // Expand is a function in GraphSearchSolution that enables visualization
-            if (current.id == goal.id) {
+            if (current.id === goal.id) {
                 return true;
             }
             for (let adj of neighbors) {

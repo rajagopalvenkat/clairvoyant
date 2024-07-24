@@ -6,7 +6,7 @@ export async function getApiObject<T>(url: string, defaultVal: T): Promise<T> {
         let response = await fetch(url)
         let json = await response.json()
         result = json as T
-        if (result == undefined) {
+        if (result === undefined) {
             console.error(`Received empty result from ${url}, json: ${json}`)
         }
     } catch (err) {

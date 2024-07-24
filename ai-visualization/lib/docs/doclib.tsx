@@ -69,7 +69,7 @@ export class UnionDocType implements DocType {
     render(): ReactNode {
         return (
             <>{this.types.map((t,i,arr) =>{
-                let separator = i == arr.length - 1 ? "" : " | ";
+                let separator = i === arr.length - 1 ? "" : " | ";
                 return (<>{t.render()}{separator}</>)
             })}</>
         )
@@ -84,7 +84,7 @@ export class TupleArrayDocType implements DocType {
     render(): ReactNode {
         return (
             <>[{this.types.map((t,i,arr) =>{
-                let separator = i == arr.length - 1 ? "" : ", ";
+                let separator = i === arr.length - 1 ? "" : ", ";
                 return (<>{t.render()}{separator}</>)
             })}]</>
         )
@@ -102,7 +102,7 @@ export class GenericDocType implements DocType {
             <>
             {this.mainType.render()}&lt;{
                 this.argTypes.map((a,i,arr) => {
-                    let separator = i == arr.length - 1 ? "" : ", ";
+                    let separator = i === arr.length - 1 ? "" : ", ";
                     return (<>{a.render()}{separator}</>)
                 })
             }&gt;
@@ -134,7 +134,7 @@ export const ConstDocRecord = new EDocType("Record", "https://developer.mozilla.
 export function formatArgs(args: DocArg[]) {
     let result: ReactNode[] = []
     result = args.map((n,i,arr) => {
-        let elemSeparator = i == arr.length - 1 ? "" : ", "
+        let elemSeparator = i === arr.length - 1 ? "" : ", "
         return (
             <span key={i}>{n.name} : {n.type?.render() ?? "any"}{n.default !== undefined ? renderValue(n.default, " = ", "", i + arr.length) : ""}{elemSeparator}</span>
         )

@@ -33,7 +33,7 @@ export function dijsktra(graph: Graph, start: GraphNode, useWeights: boolean = t
         });
 
         // End early for disconnected graphs
-        if (minDistance == Infinity) {break;}
+        if (minDistance === Infinity) {break;}
 
         current = graph.getNodeById(nextNode)!;
     }

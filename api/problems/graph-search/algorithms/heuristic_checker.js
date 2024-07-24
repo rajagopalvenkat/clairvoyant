@@ -101,7 +101,7 @@ class HeuristicChecker {
         for (let {edge, heuristic1, weight, heuristic2} of inconsistent) {
             analysis.push(`Edge ${edge.source.id} -> ${edge.target.id} has heuristic delta ${Math.abs(heuristic1 - heuristic2)} but weight ${weight}. H: ${heuristic1} -> ${heuristic2}.`);
         }
-        if (analysis.length == 0) {
+        if (analysis.length === 0) {
             analysis.push("Heuristic is admissible and consistent.");
         }
         this.highlight(badComponents, analysis.join("\n"));

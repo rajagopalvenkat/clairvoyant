@@ -1,13 +1,14 @@
 import { AdversarialSearchCase, AdversarialSearchPosition, requiredGameMethods, requiredPositionMethods } from "./adversarialCase";
 import { EditableComponent, ItemProperty } from "../../lib/utils/properties";
 import { GenericGraph, GraphEdgeSimple, GraphNode } from "../graphs/graph";
+import { ensureError } from "../errors/error";
 
-interface AdversarialSearchAction {
+export interface AdversarialSearchAction {
     name?: string;
     [key: string]: any;
 }
 
-interface AdversarialSearchMove {
+export interface AdversarialSearchMove {
     position: AdversarialSearchPosition;
     action: AdversarialSearchAction;
 }
@@ -37,7 +38,7 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
         this.game = game;
         this.gameTree = new GenericGraph();
         let initPosition = game.getInitialPosition();
-        let startNode = new GraphNode(this.gameTree, initPosition.getId(), 0, 0, {position: initPosition, expanded: false});
+        let startNode = new GraphNode(this.gameTree, initPosition.id, 0, 0, {position: initPosition, expanded: false});
         this.gameTree.addNode(startNode);
         this.gameTree.startNode = startNode;
         this.gameTree.endNode = startNode;
@@ -65,7 +66,12 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
     abstract getPlaySequence(position: AdversarialSearchPosition): AdversarialSearchMove[];
     abstract runExpansion(position: AdversarialSearchPosition): Generator<AdversarialExpansion>;
     expand(position: AdversarialSearchPosition): AdversarialExpansion {
-        let posId = position.getId();
+        // Already expanded and cached to position
+        if (position.moves && position.moves.length > 0) {
+            return {position: position, moves: position.moves};
+        }
+        
+        let posId = position.id;
         let curNode = this.gameTree.getNodeById(posId);
         if (!curNode) {
             curNode = new GraphNode(this.gameTree, posId, 0, 0, {position: position, expanded: false});
@@ -73,12 +79,14 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
         }
 
         // already expanded
-        if (curNode.data["expanded"]) {
+        if (curNode.data["expanded"]) {            
             let cache = [...this.gameTree.getAdjacentEdges(curNode)];
-            return {position: position, moves: cache.map(edge => {return {position: edge.target.data["position"], action: edge.data["action"]}})};
+            let moves = cache.map(edge => {return {position: edge.target.data["position"], action: edge.data["action"]}});
+            position.moves = moves;
+            return {position: position, moves: moves};
         }
 
-        if (this.allowedExpansions-- == 0) {
+        if (this.allowedExpansions-- === 0) {
             this.allowedExpansions = 0;
             return {position: position, moves: []};
         }
@@ -92,9 +100,9 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
 
         for (let s of moves) {
             // In case of converging lines, we need to check if the node already exists
-            let nextNode = this.gameTree.getNodeById(s.position.getId());
+            let nextNode = this.gameTree.getNodeById(s.position.id);
             if (!nextNode) {
-                nextNode = new GraphNode(this.gameTree, s.position.getId(), 0, 0, {position: s.position, expanded: false});
+                nextNode = new GraphNode(this.gameTree, s.position.id, 0, 0, {position: s.position, expanded: false});
                 this.gameTree.addNode(nextNode);
             }
             let edge = new GraphEdgeSimple(this.gameTree.getNextEdgeIdentifier(), curNode, nextNode, false, {action: s.action});
@@ -102,6 +110,7 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
         }
 
         curNode.data["expanded"] = true;
+        position.moves = moves;
         return {position: position, moves: moves};
     }
 }
@@ -132,17 +141,18 @@ export function buildAdversarialSolution(solutionCode: string, gameCode: string)
 
         for (let method of requiredGameMethods) {
             if (!Object.hasOwn(gameProto, method.name) || gameProto[method.name].length !== method.args) {
-                throw new Error(`${method.name} method is not defined in the Case class or has the wrong number of arguments, it should expect ${method.args} argument${method.args == 1 ? "" : "s"}.`);
+                throw new Error(`${method.name} method is not defined in the Case class or has the wrong number of arguments, it should expect ${method.args} argument${method.args === 1 ? "" : "s"}.`);
             }
         }
         for (let method of requiredPositionMethods) {
             if (!Object.hasOwn(posProto, method.name) || posProto[method.name].length !== method.args) {
-                throw new Error(`${method.name} method is not defined in the Position class returned from getInitialPosition or has the wrong number of arguments, it should expect ${method.args} argument${method.args == 1 ? "" : "s"}.`);
+                throw new Error(`${method.name} method is not defined in the Position class returned from getInitialPosition or has the wrong number of arguments, it should expect ${method.args} argument${method.args === 1 ? "" : "s"}.`);
             }
         }
     }
     catch (e) {
-        throw new AdversarialSearchBuildError("Error evaluating code: " + e, "case");
+        let err = ensureError(e);
+        throw new AdversarialSearchBuildError(`Error evaluating code: ${err.stack}`, "case");
     }
 
     try {
@@ -153,7 +163,7 @@ export function buildAdversarialSolution(solutionCode: string, gameCode: string)
 
         for (let method of requiredSolverMethods) {
             if (!Object.hasOwn(solverProto, method.name) || solverProto[method.name].length !== method.args) {
-                throw new Error(`${method.name} method is not defined in the Solution class or has the wrong number of arguments, it should expect ${method.args} argument${method.args == 1 ? "" : "s"}.`);
+                throw new Error(`${method.name} method is not defined in the Solution class or has the wrong number of arguments, it should expect ${method.args} argument${method.args === 1 ? "" : "s"}.`);
             }
         }
     } catch (e) {

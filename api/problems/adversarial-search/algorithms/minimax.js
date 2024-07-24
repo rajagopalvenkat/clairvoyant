@@ -1,4 +1,6 @@
 (SolverBase, game) => {
+    const FLOAT_EPSILON = 1e-10;
+
     class Minimax extends SolverBase {
         constructor(game) {
             super(game);
@@ -7,14 +9,15 @@
         // this function should use the generated expansions to generate an "optimal" play sequence
         // expand() should not be called in this function
         getPlaySequence(position) {
-            this.dfsMinimax(position, 0, true);
+            position.utility = this.dfsMinimax(position, 0, true);
+            console.log(`Utility from node: ${position.utility}`);
             let playSequence = [];
             let current = position;
-            let move = current.data["bestMove"];
-            while (move) {
-                playSequence.push(move);
-                current = move.position;
-                move = current.data["bestMove"];
+            let moves = current.bestMoves[0];
+            while (moves && moves.length > 0) {
+                playSequence.push(moves[0]);
+                current = moves[0].position;
+                moves = current.bestMoves;
             }
             return playSequence;
         }
@@ -27,9 +30,10 @@
             // This avoids having massive queues in memory, which end up slowing down the algorithm
             // This is also a common approach in practice for memory reasons, though since visualizations require storing all positions, this isn't much of a benefit here.
             let maxNodesFound = -1;
-            let maxDepthAllowed = 4;
+            let maxDepthAllowed = 1;
             let nodesFound = 0;
             while (nodesFound > maxNodesFound) {
+                console.log(`Starting deepening expansion with depth ${maxDepthAllowed}, last nodes found ${nodesFound}.`)
                 maxNodesFound = nodesFound;
                 nodesFound = 0;
                 for (let expansion of this.dfs(node, 0, maxDepthAllowed)) {
@@ -44,9 +48,8 @@
             if (node.isTerminal() || depth === maxDepth) {
                 return;
             }
-            let expansion = this.expand(node);
-            yield expansion;
-            for (let move of expansion.moves) {
+            yield this.expand(node);
+            for (let move of node.moves) {
                 yield* this.dfs(move.position, depth + 1, maxDepth);
             }
         }
@@ -54,42 +57,52 @@
         // you may extend expansion logic, but you should always return the result of super.expand
         expand(node) {
             let result = super.expand(node);
-            // the "data" field should always be safe to use for storing custom data
-            node.data["moves"] = result.moves;
+            // you can add additional data to the node here
             return result;
         }
 
+        /** @param {Position} node */
         dfsMinimax(node) {
+            // This value is used to render the best move(s) from any given position
+            node.bestMoves = [];
+
             if (node.isTerminal()) {
-                return node.getScore();
+                node.utility = node.getScore();
+                return node.utility;
             }
             // expansion budget unavailable for this node
-            if (!node.data["moves"]) {
+            if (!node.moves) {
                 // here, you can return a heuristic value for the node
                 // or you can just return 0 to assume a draw
-                return 0;
+                node.utility = 0;
+                if (typeof node.getHeuristic === "function") {
+                    node.utility = node.getHeuristic();
+                }
+                return node.utility;
             }
-            let currentPlayer = node.data["position"].getPlayer();
+            let currentPlayer = node.getPlayer();
             let maximizingPlayer;
-            if (currentPlayer == 1) {
+            if (currentPlayer === 1) {
                 maximizingPlayer = true;
-            } else if (currentPlayer == -1) {
+            } else if (currentPlayer === -1) {
                 maximizingPlayer = false;
             } else {
                 throw new Error("Invalid player for minimax algorithm.");
             }
 
-            let bestScore = maximizingPlayer ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
-            let bestMove = undefined;
-            for (let move of node.data["moves"]) {
+            node.utility = maximizingPlayer ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
+            let bestMoves = [];
+            for (let move of node.moves) {
                 let score = this.dfsMinimax(move.position);
-                if (maximizingPlayer ? score > bestScore : score < bestScore) {
-                    bestScore = score;
-                    bestMove = move;
+                if (Math.abs(score - node.utility) < FLOAT_EPSILON) {
+                    bestMoves.push(move);
+                } else if (maximizingPlayer ? score > node.utility : score < node.utility) {
+                    node.utility = score;
+                    bestMoves = [move];
                 }
             }
-            node.data["bestMove"] = bestMove;
-            return bestScore;
+            node.bestMoves = bestMoves;
+            return node.utility;
         }        
     }
 

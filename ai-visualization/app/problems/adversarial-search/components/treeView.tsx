@@ -1,11 +1,16 @@
 import { dijsktra } from "@/lib/graphs/algorithms"
 import { Graph, GraphEdge, GraphNode } from "@/lib/graphs/graph"
 import { colorLerp, colorWithAlpha } from "@/lib/utils/colors";
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import VisGraph, { GraphData, Options as VisGraphOptions } from "react-vis-graph-wrapper"
 import { Font, NodeOptions } from "vis-network";
 import { GraphEvents } from "@/lib/graphs/vis-events";
 import { AdversarialSearchPosition } from "@/lib/adversarial/adversarialCase";
+import { AdversarialSearchAction } from "@/lib/adversarial/adversarialSolution";
+import { buttonStyleClassNames } from "@/lib/statics/styleConstants";
+import { showConfirmation } from "@/app/components/dialogs/comfirm";
+
+import "./treeView.css";
 
 function getVisOptions(graph: Graph | null = null): VisGraphOptions {
     let fontColor = "#7777ff";
@@ -53,24 +58,32 @@ function getVisOptions(graph: Graph | null = null): VisGraphOptions {
 function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptions {
     let result : NodeOptions = {};
     let c = "#888888";
+    let bc = "#444444";
     let pos : AdversarialSearchPosition = node.data["position"];
     if (pos.isTerminal()) {
         c = colorLerp("#ff0000", "#00ff00", (pos.getScore() / 2 + 0.5));
     }
+    let utility = pos.getUtility();
+    if (utility !== undefined) {
+        bc = colorLerp("#ff0000", "#00ff00", (utility / 2 + 0.5));
+    }
 
     let shape = "ellipse";
     let player = pos.getPlayer();
-    if (player === 1) {
-        shape = "triangle";
-    } else if (player === -1) {
-        shape = "triangleDown";
+    let terminal = pos.isTerminal();
+    if (!terminal) {
+        if (player === 1) {
+            shape = "triangle";
+        } else if (player === -1) {
+            shape = "triangleDown";
+        }
     }
     result.shape = shape;
     result.size = 12;
 
-    let borderColor = node.data["highlighted"] ? "#ff0000" : c;
+    //bc = node.data["highlighted"] ? "#ff0000" : bc;
     result.borderWidth = node.data["highlighted"] ? 3 : 1;
-    result.color = {border: borderColor, background: c, highlight: {border: borderColor}};
+    result.color = {border: bc, background: c, highlight: {border: bc}};
     result.font = {
         "color": (globals.nodes!.font! as Font).color!,
         "strokeColor": (globals.nodes!.font! as Font).strokeColor!,
@@ -91,6 +104,19 @@ function getEdgeAttributes(edge: GraphEdge): Record<string, any> {
     let c = "#ffffff";
     if (edge.getProp("highlighted")) {
         c = "#ff0000";
+    }
+    let action : AdversarialSearchAction = edge.data["action"];
+    let sourcePos: AdversarialSearchPosition = edge.source.data["position"];
+    let isBest = false;
+    if (action && sourcePos) {
+        let actName = action["name"]
+        let sourcePosBestActions = sourcePos.bestMoves
+        if (actName && (sourcePosBestActions?.length ?? 0) > 0) {
+            isBest = (sourcePosBestActions?.findIndex(a => a.action.name === actName) ?? -1) >= 0;
+        }
+    }
+    if (isBest) {
+        c = "#3333ff";
     }
     result.color = c;
     result.label = edge.data["action"]["label"] ?? edge.data["action"]["name"] ?? "";
@@ -117,6 +143,21 @@ export default function TreeView({graph, onNodeSelected = (x) => {}, renderKey}:
     let [graphOptions, setGraphOptions] = useState<VisGraphOptions>(getVisOptions(graph));
     let [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
+    let requestExpandAll = useCallback(async () => {
+        if (!graph) return;
+        let allNodes = graph?.getAllNodes();
+        let confirmation = await showConfirmation(`Are you sure you want to expand all ${allNodes.length} nodes? Expanding too many nodes could have adverse performance effects or even crash the application. This action cannot be undone.`);
+        if (confirmation) {
+            setExpandedNodes(new Set(allNodes.map(n => n.id)));
+        }
+    }, [graph, renderKey])
+    let requestCollapseAll = useCallback(async () => {
+        let confirmation = await showConfirmation(`Are you sure you want to collapse all ${expandedNodes.size} expanded nodes? This action cannot be undone.`);
+        if (confirmation) {
+            setExpandedNodes(new Set());
+        }
+    }, [expandedNodes])
+
     useEffect(() => {
         if (!graph || !graph.startNode) { return; }
 
@@ -125,8 +166,11 @@ export default function TreeView({graph, onNodeSelected = (x) => {}, renderKey}:
 
         let startPos = graph.startNode;
         let q = [{node: startPos, distance: 0}];
+        let visited = new Set<string>();
         while (q.length > 0) {
             let {node, distance} = q.shift()!;
+            if (visited.has(node.id)) continue;
+            visited.add(node.id);
             let label = ""; node.getProp("label");
             let pos : AdversarialSearchPosition = node.data["position"];
             if (expandedNodes.has(node.id)) {
@@ -176,9 +220,18 @@ export default function TreeView({graph, onNodeSelected = (x) => {}, renderKey}:
         }
     }
     
-    return <VisGraph 
-        graph={graphData} 
-        options={graphOptions}
-        events={events}
-    />
+    return (
+        <div className="relative w-full h-full">
+            <VisGraph 
+                graph={graphData} 
+                options={graphOptions}
+                events={events}
+            />
+            <div className={`tree-view-overlay flex flex-col items-end gap-2 ${graphData.nodes.length > 0 ? '' : 'hidden'}`}>
+                <button className={`${buttonStyleClassNames} p-1 rounded-xl`} onClick={requestExpandAll}>Expand All</button>
+                <button className={`${buttonStyleClassNames} p-1 rounded-xl`} onClick={requestCollapseAll}>Collapse All</button>
+            </div>
+        </div>
+    )
+    return 
 }

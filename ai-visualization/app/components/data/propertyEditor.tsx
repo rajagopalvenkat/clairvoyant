@@ -40,7 +40,7 @@ function PropertySetButton({property, internalValue, text="Apply", onPress}: {
 }) {
     if (property.fixed) {return <></>}
     return (
-        <button disabled={`${property.value}` == internalValue} className="trigger-button" onClick={() => onPress()}> {text} </button>
+        <button disabled={`${property.value}` === internalValue} className="trigger-button" onClick={() => onPress()}> {text} </button>
     )
 }
 
@@ -69,7 +69,11 @@ export function PropertyEditor({property, onChange}: {
 
     // Update internal value when it is externally changed
     useEffect(() => {
-        setInternalValue(`${property.value}`);
+        if (property.type === "object") {
+            setInternalValue(JSON.stringify(property.value));
+        } else {
+            setInternalValue(`${property.value}`);
+        }
     }, [property])
 
     if (property.type === "string") {
@@ -110,6 +114,19 @@ export function PropertyEditor({property, onChange}: {
             </>
         )
     }
+    if (property.type === "color") {
+        if (property.dynamic) {
+            return (
+                <input type="color" value={internalValue} onChange={(e) => onChange(e.target.value)} />
+            )
+        }
+        return (
+            <>
+                <input type="color" disabled={property.fixed} value={internalValue} onChange={(e) => setInternalValue(e.target.value)} />
+                <PropertySetButton property={property} internalValue={internalValue} onPress={() => onChange(internalValue)} />
+            </>
+        )
+    }
     if (property.type === "boolean") {
         if (!property.trigger) {
             return (
@@ -122,4 +139,30 @@ export function PropertyEditor({property, onChange}: {
             )
         }
     }
+    if (property.type === "object") {
+        let applyFunc = (val: string) => {
+            let obj;
+            try {
+                obj = JSON.parse(val);
+                onChange(obj);
+            } catch {
+                setInternalValue(JSON.stringify(property.value));
+                toast.error(`Invalid JSON for property: ${property.name}`);
+            }
+        }
+        if (property.dynamic || property.fixed) {
+            return (
+                <textarea disabled={property.fixed} value={internalValue} onChange={(e) => {applyFunc(e.target.value)}} />
+            )
+        }
+        return (
+            <>
+                <textarea value={internalValue} onChange={(e) => setInternalValue(e.target.value)} />
+                <PropertySetButton property={property} internalValue={internalValue} onPress={() => applyFunc(internalValue)} />
+            </>
+        )
+    }
+    return (
+        <div> Unsupported property type: {property.type} </div>
+    )
 }

@@ -33,7 +33,7 @@ class Color {
             }
         } else if (typeof c === "object") {
             if (c.length < 3 || c.length > 4) throw new Error("Invalid color format: " + c);
-            if (c.length == 3) c.push(255);
+            if (c.length === 3) c.push(255);
             this.r = c[0];
             this.g = c[1];
             this.b = c[2];

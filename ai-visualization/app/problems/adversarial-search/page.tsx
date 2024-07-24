@@ -16,6 +16,7 @@ import { AdversarialSearchCase, AdversarialSearchPosition } from "@/lib/adversar
 import { PropertyInspector } from "@/app/components/data/propertyEditor";
 
 import "./adversarial-search.css";
+import { ItemProperty } from "@/lib/utils/properties";
 
 const defaultDraw = (ctx: CanvasRenderingContext2D) => {}
 
@@ -42,12 +43,17 @@ export default function GraphSearchPage() {
     let [initialPosition, setInitialPosition] = useState<AdversarialSearchPosition | null>(null);
     let [shownPosition, setShownPosition] = useState<AdversarialSearchPosition | null>(null);
 
+    // property management
+    let [gameProperties, setGameProperties] = useState<ItemProperty[]>([])
+
     function runAlgo() {
         try {
             let [solver, game] = buildAdversarialSolution(algoData, caseData);
             setSolver(solver);
             setGame(game);
             initializeGame(game, solver);
+            setGameProperties(game.properties);
+            setExpansionGenerator(null);
             setCaseErrorMessage("");
             setAlgoErrorMessage("");
         } catch (err) {
@@ -62,7 +68,7 @@ export default function GraphSearchPage() {
             }
             else 
             {
-                setAlgoErrorMessage(error.message);
+                setAlgoErrorMessage(`Runtime error: ${error.stack}`);
             }
         }
     }
@@ -82,14 +88,14 @@ export default function GraphSearchPage() {
         console.log(initialPos);
         solver.allowedExpansions = maxExpansions;
         let expander = expansionGenerator;
-        if (!expansionGenerator || expansionGenerator.initialPosition.getId() !== initialPos.getId()) {
+        if (!expansionGenerator || expansionGenerator.initialPosition.id !== initialPos.id) {
             expander = {
                 generator: solver.runExpansion(initialPos),
                 initialPosition: initialPos
             }
             setExpansionGenerator(expander);
         }
-        while (true) {
+        while (solver.allowedExpansions > 0) {
             let action : IteratorResult<AdversarialExpansion>;
             try {
                 action = expander!.generator.next();
@@ -107,7 +113,11 @@ export default function GraphSearchPage() {
                 break;
             }
         }
+        if (solver.allowedExpansions <= 0) {
+            toast.success("Expansion limit reached");
+        }
         let playSequence = solver.getPlaySequence(initialPos);
+        console.log(playSequence);
         // highlight move sequence
         let curNode = solver.gameTree.getNodeById(initialPos.id);
         for (let move of playSequence) {
@@ -125,15 +135,16 @@ export default function GraphSearchPage() {
     }, [game, solver, initialPosition, graphRenderKey]);
 
     const onGamePropertyChange = useCallback((property: string, oldValue: any, newValue: any) => {
+        game?.setProp(property, newValue);
+        setGameProperties(game?.properties ?? []);
+    }, [game, graphRenderKey, shownPosition, solver]);
+    const onPositionPropertyChange = useCallback((property: string, oldValue: any, newValue: any) => {
         if (property === "__expand") {
-            console.log(`Expanding ${shownPosition?.getId()}`);
+            console.log(`Expanding ${shownPosition?.id}`);
             if (shownPosition) solver?.expand(shownPosition);
             setGraphRenderKey(graphRenderKey + 1);
             return;
         }
-        game?.setProp(property, newValue);
-    }, [game, graphRenderKey, shownPosition, solver]);
-    const onPositionPropertyChange = useCallback((property: string, oldValue: any, newValue: any) => {
         shownPosition?.setProp(property, newValue);
     }, [shownPosition]);
 
@@ -158,15 +169,20 @@ export default function GraphSearchPage() {
             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             shownPosition.render(ctx);
         }
-    }, [shownPosition]);
+    }, [shownPosition, gameProperties]);
 
     let extendedProperties = shownPosition ? shownPosition.properties : [];
-    let positionNode = solver?.gameTree.getNodeById(shownPosition?.getId() ?? "");
+    let positionNode = solver?.gameTree.getNodeById(shownPosition?.id ?? "");
     if (shownPosition && positionNode) {
+        let isPositionTerminal = shownPosition.isTerminal();
         extendedProperties.push(...[
-            {name: "isTerminal", value: shownPosition.isTerminal(), type: "boolean", fixed: true, display: "Terminal?"},
-            {name: "__expand", value: positionNode.data.expanded, type: "boolean", display: "Expand", trigger: true}
-        ])
+            {name: "isTerminal", value: isPositionTerminal, type: "boolean", fixed: true, display: "Terminal?"},           
+        ]);
+        if (!isPositionTerminal) {
+            extendedProperties.push(...[
+                {name: "__expand", value: positionNode.data.expanded, type: "boolean", display: "Expand", trigger: true}
+            ]);
+        }
     }
 
     return (
@@ -184,16 +200,18 @@ export default function GraphSearchPage() {
                     setLeftWidth(leftWidth + v);
                 })}></VDivider>
                 <div className="relative overflow-hidden flex flex-row p-3 m-2 rounded-md border-accent dark:border-accent-200 border-solid border flex-grow">
-                    <div className="w-1/2 max-h-[calc(100dvh-110px)]">
+                    <div className="tree-inspector max-h-[calc(100dvh-110px)]">
                         <TreeView renderKey={graphRenderKey} graph={solver?.gameTree ?? null} onNodeSelected={onNodeSelected}></TreeView>
                     </div>
-                    <div className="relative w-1/2 max-h-[calc(100dvh-110px)] flex justify-center align-middle">
-                        <Canvas className="max-h-full max-w-full" draw={positionRender} width={500} height={1000}></Canvas>
-                        <div className="absolute left-0 top-0 h-full w-full" id="gameDiv"></div>
+                    <div className="game-view w-1/2 max-h-[calc(100dvh-110px)] flex justify-center align-middle">
+                        <div className="relative w-full h-full">
+                            <Canvas className="mx-auto max-h-full max-w-full" draw={positionRender} width={500} height={1000}></Canvas>
+                            <div className="absolute left-0 top-0 h-full w-full" id="gameDiv"></div>
+                        </div>
                     </div>
                     { game ? 
                         <div className="game-inspector">
-                            <PropertyInspector properties={game.properties} onChange={(p,o,v) => onGamePropertyChange(p,o,v)}></PropertyInspector>
+                            <PropertyInspector properties={gameProperties} onChange={(p,o,v) => onGamePropertyChange(p,o,v)}></PropertyInspector>
                         </div> : <></>
                     }
                     { shownPosition !== null ? 

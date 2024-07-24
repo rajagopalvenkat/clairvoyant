@@ -1,7 +1,7 @@
-(PositionBase, GameBase) => {
+(GameBase, PositionBase) => {
     class Position extends PositionBase {
         /** 
-         * @param {TicTacToeSearchCase} game
+         * @param {TicTacToe} game
          * @param {string[][]} squares 
          * @param {string} next
         */
@@ -28,17 +28,14 @@
         /** @param {CanvasRenderingContext2D} ctx */
         render(ctx) {
             let helper = this.drawHelper(ctx);
-            let w = 500/3;
-            for (let x of [w, w * 2]) {
-                helper.drawLine(x, 250, x, 750, "#808080");
-                helper.drawLine(0, x + 250, 500, x + 250, "#808080");
-            }
+            // draw a centered 500px by 500px, 3 by 3 grid
+            helper.drawGrid(0, 250, 500, 500, 3, 3, "#808080");
             for (let i = 0; i < 3; i++) {
                 for (let j = 0; j < 3; j++) {
                     let x = j * w + w / 2;
                     let y = i * w + w / 2 + 250;
                     let text = this.squares[i][j];
-                    let color = text == "X" ? "#ff0000" : "#0000ff";
+                    let color = this.game.colors[text];
                     helper.drawTextCentered(text, x, y + 15, w - 10, color);
                 }
             }
@@ -108,11 +105,12 @@
                 "X": "#ff0000",
                 "O": "#0000ff"
             }
+            this.initialPos = new Position(this, [[" ", " ", " "], [" ", " ", " "], [" ", " ", " "]], "X");
         }
         get properties() {
             return [
-                {name: "x_color", type: "string", value: this.colors["X"], display: "X Color"},
-                {name: "o_color", type: "string", value: this.colors["O"], display: "O Color"},
+                {name: "x_color", type: "color", value: this.colors["X"], display: "X Color"},
+                {name: "o_color", type: "color", value: this.colors["O"], display: "O Color"},
             ];
         }
         setProp(name, value) {
@@ -123,12 +121,13 @@
                 case "o_color":
                     this.colors["O"] = value;
                     return true;
+                default:
+                    return false;
             }
-            return false;
         }
     
         getInitialPosition() {
-            return new Position(this, [[" ", " ", " "], [" ", " ", " "], [" ", " ", " "]], "X");
+            return this.initialPos;
         }
     
         /** @param {Position} position */

@@ -18,7 +18,7 @@ const InspectorDialogInternal: ConfirmDialog<{
     }, [properties])
 
     function handleChange(name: string, oldValue: any, newValue: any) {
-        let newProperties = internalProperties.map(p => p.name == name ? {...p, value: newValue} : p);
+        let newProperties = internalProperties.map(p => p.name === name ? {...p, value: newValue} : p);
         setInternalProperties(newProperties);
     }
 

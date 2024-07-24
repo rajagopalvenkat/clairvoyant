@@ -1,20 +1,33 @@
 import { NodeOptions } from "vis-network";
-import { EditableComponent } from "../utils/properties";
+import { EditableComponent, ItemProperty } from "../utils/properties";
+import { AdversarialSearchMove } from "./adversarialSolution";
+import { CanvasHelper } from "../utils/canvasHelper";
 
 export abstract class AdversarialSearchPosition implements EditableComponent {
     data: any;
     style: NodeOptions | undefined;
+    moves: AdversarialSearchMove[] | undefined;
+    bestMoves: AdversarialSearchMove[] | undefined;
+    utility: number | undefined;
     constructor() {
-        console.log("Running base position constructor");
         this.data = {};
         this.style = {};
+        this.moves = [];
     }
     get id(): string {
-        console.log([this, this.getId()]);
         return this.getId();
     }
-    get properties(): any[] {
-        return [];
+    get properties(): ItemProperty[] {
+        let result: ItemProperty[] = [
+            {name: "data", display: "Data", type: "object", value: this.data, fixed: true},
+        ];
+        if (this.utility === undefined) {
+            this.utility = this.getUtility();
+        }
+        if (this.utility !== undefined) {
+            result.push({name: "utility", display: "Utility", type: "number", value: this.utility, fixed: true});
+        }
+        return result;
     }
     getProp(name: string): any {
         let props = this.properties;
@@ -27,6 +40,12 @@ export abstract class AdversarialSearchPosition implements EditableComponent {
     }
     setProp(name: string, value: any): boolean {
         return false;
+    }
+    drawHelper(ctx: CanvasRenderingContext2D) {
+        return new CanvasHelper(ctx);
+    }
+    getUtility(): number | undefined {
+        return this.utility;
     }
     abstract getId(): string;
     abstract render(ctx: CanvasRenderingContext2D): void;
@@ -55,44 +74,9 @@ export abstract class AdversarialSearchCase implements EditableComponent {
     setProp(name: string, value: any): boolean {
         return false;
     }
-    drawHelper(ctx: CanvasRenderingContext2D) {
-        return new DrawHelper(ctx);
-    }
     abstract getInitialPosition(): AdversarialSearchPosition;
     abstract getActions(position: AdversarialSearchPosition): any[];
     abstract getResult(position: AdversarialSearchPosition, action: any): AdversarialSearchPosition;
-}
-
-export class DrawHelper {
-    ctx: CanvasRenderingContext2D;
-    constructor(ctx: CanvasRenderingContext2D) {
-        this.ctx = ctx;
-    }
-    drawCircle(x: number, y: number, r: number, color: string | undefined = undefined) {
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, r, 0, 2 * Math.PI);
-        if (color) this.ctx.fillStyle = color;
-        this.ctx.fill();
-    }
-    drawLine(x1: number, y1: number, x2: number, y2: number, color: string | undefined = undefined) {
-        this.ctx.beginPath();
-        this.ctx.moveTo(x1, y1);
-        this.ctx.lineTo(x2, y2);
-        if (color) this.ctx.strokeStyle = color;
-        this.ctx.stroke();
-    }
-    drawTextCentered(text: string, x: number, y: number, size: number, color: string | undefined = undefined, strokeColor: string | undefined = undefined, maxWidth: number | undefined = undefined, fontFamily: string = "Arial") {
-        this.ctx.textAlign = "center";
-        this.ctx.textBaseline = "middle";
-        this.ctx.font = `${size}px ${fontFamily}`;
-        if (color) this.ctx.fillStyle = color;
-        this.ctx.fillText(text, x, y, maxWidth);
-        if (strokeColor) { 
-            this.ctx.strokeStyle = strokeColor;
-            this.ctx.strokeText(text, x, y, maxWidth);
-        }
-    }
-
 }
 
 export const requiredGameMethods = [

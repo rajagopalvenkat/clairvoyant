@@ -9,6 +9,7 @@ import ClipboardButton from "../clipboardButton";
 import ReactCodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import React from "react";
+import CodeView from "./codeView";
 
 const init_defaultCases: string[] = [];
 
@@ -78,8 +79,8 @@ export default function CaseEditor({problem, errorMessage, caseData, onCaseDataC
         </div>
         <div className="flex-grow flex flex-col relative" ref={textRef}>
         {codeMode ? (
-            <ReactCodeMirror className="absolute inset-0" style={{height: `calc(${textRef.current?.clientHeight}px - 1rem)`}} lang="javascript" extensions={[themes[currentTheme], syntaxHighlighting(highlights[currentTheme]), langData]} value={caseData} onChange={e => onCaseDataChanged(e ?? "")}>
-            </ReactCodeMirror>
+            <CodeView className="absolute inset-0" style={{height: `calc(${textRef.current?.clientHeight}px - 1rem)`}} lang="javascript" extensions={[themes[currentTheme], syntaxHighlighting(highlights[currentTheme]), langData]} value={caseData} onChange={e => onCaseDataChanged(e ?? "")}>
+            </CodeView>
         ) : (
             <textarea className="flex-grow min-h-0 w-full bg-primary-50 dark:bg-primary-950 text-secondary dark:text-secondary-200" 
                 value={caseData} onChange={e => onCaseDataChanged(e.target.value ?? "")}>

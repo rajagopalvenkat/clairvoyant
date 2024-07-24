@@ -105,8 +105,8 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
     c = colorWithAlpha(c, traversabilityAlpha);
     let borderColor = node.data["highlighted"] ? "#ff0000" : c;
     result.borderWidth = node.data["highlighted"] ? 3 : 1;
-    let held = node.graph.context.heldNode?.id == node.id;
-    let hovered = node.graph.context.hoveredNode?.id == node.id;
+    let held = node.graph.context.heldNode?.id === node.id;
+    let hovered = node.graph.context.hoveredNode?.id === node.id;
     result.fixed = held;
     if (held) {
         borderColor = "#00ff00"; 
@@ -132,11 +132,11 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
         result.size = 8;
     }
 
-    if (node.graph.startNode?.id == node.id) {
+    if (node.graph.startNode?.id === node.id) {
         result.shape = "diamond";
         result.size = 15;
     }
-    if (node.graph.endNode?.id == node.id) {
+    if (node.graph.endNode?.id === node.id) {
         result.shape = "star";
         result.size = 15;
     }
@@ -162,7 +162,7 @@ export function GraphComponentInspector({components, onChanges, onDeletionReques
     onChanges: (property: string, oldValue: any, newValue: any) => void,
     onDeletionRequested: () => void,
 }) {
-    if (components.length == 0) {
+    if (components.length === 0) {
         return <></>
     }
     if (components.length > 1) {
@@ -219,7 +219,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
             });
             let oldOptions = visGraphOptions;
             let newOptions = getVisOptions(graph);
-            if (JSON.stringify(oldOptions) == JSON.stringify(newOptions)) return;
+            if (JSON.stringify(oldOptions) === JSON.stringify(newOptions)) return;
             setVisGraphOptions(newOptions);
         }
         console.log("Re-rendering graph")
@@ -243,7 +243,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
             toast.error("No valid graph loaded."); return;
         }
         let newData = await showInspectorDialog(nodeCreationProperties, "Node ID", "Enter the ID for the new node");
-        if (newData == null) {return;} // cancelled
+        if (newData === null) {return;} // cancelled
         if (!newData) {
             toast.error("No data entered, node creation cancelled."); return;
         }
@@ -279,7 +279,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                     }
                     graphChangedCallback(graph);
                 }
-            } else if (selectedNodes.length == 0 && edges.length > 0) {
+            } else if (selectedNodes.length === 0 && edges.length > 0) {
                 for (let edgeId of edges) {
                     let edge = graph.getEdgeById(edgeId as number);
                     if (edge) {
@@ -323,7 +323,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
         },
         dragStart: (event) => {
             if (!graph) return;
-            graph.context.draggingNode = event.nodes.length == 0 ? undefined : graph.getNodeById(event.nodes[0] as string);
+            graph.context.draggingNode = event.nodes.length === 0 ? undefined : graph.getNodeById(event.nodes[0] as string);
             graphChangedCallback(graph);
         },
         release: (event) => {

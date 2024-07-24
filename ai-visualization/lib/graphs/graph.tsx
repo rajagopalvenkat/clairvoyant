@@ -63,7 +63,7 @@ export abstract class Graph implements EditableComponent {
     }
     getProp(name: string) {
         let properties = this.properties;
-        let prop = properties.find(p => p.name == name);
+        let prop = properties.find(p => p.name === name);
         if (!prop) throw new Error(`Property ${name} is not implemented for Graph`);
         return prop.value;
     }
@@ -71,17 +71,17 @@ export abstract class Graph implements EditableComponent {
         let analysis = canSetProps(this.properties, {[name]: value});
         if (!analysis.success) throw new Error(analysis.errors.join("\n"));
 
-        if (name == "start") {
+        if (name === "start") {
             let n = this.getNodeById(value);
-            if (n == undefined) throw new Error(`Node ${value} does not exist in the graph.`);
+            if (n === undefined) throw new Error(`Node ${value} does not exist in the graph.`);
             this.startNode = n;
-        } else if (name == "end") {
+        } else if (name === "end") {
             let n = this.getNodeById(value);
-            if (n == undefined) throw new Error(`Node ${value} does not exist in the graph.`);
+            if (n === undefined) throw new Error(`Node ${value} does not exist in the graph.`);
             this.endNode = n;
-        } else if (name == "default_bidirectional") {
+        } else if (name === "default_bidirectional") {
             this.defaultBidirectional = value;
-        } else if (name == "physics_enabled") {
+        } else if (name === "physics_enabled") {
             this.physicsEnabled = value;
         } else {
             return false;
@@ -227,7 +227,7 @@ export abstract class Graph implements EditableComponent {
         // console.log(edges);
         if (!edges) return undefined;
         for (let edge of edges) {
-            if (edge.target.id == targetNode.id && (edge.traversable() || includeUntraversable)) return edge;
+            if (edge.target.id === targetNode.id && (edge.traversable() || includeUntraversable)) return edge;
         }
         return undefined;
     }
@@ -302,7 +302,7 @@ export abstract class Graph implements EditableComponent {
     // Graph notation functions
     public static parseGraph(text: string): Graph {
         const lines = text.split(/\r?\n/);
-        if (lines.length == 0) throw new ParsingError("The graph expression must have at least 1 line indicating the graph type.", 0, 0);
+        if (lines.length === 0) throw new ParsingError("The graph expression must have at least 1 line indicating the graph type.", 0, 0);
         if (lines[0].startsWith("GENERIC")) {
             return GenericGraph.fromGraphNotation(lines);
         } else if (lines[0].startsWith("GRID")) {
@@ -340,8 +340,8 @@ export class GridGraph extends Graph {
     override get properties(): ItemProperty[] {
         return [
             ...super.properties,
-            {name: "width", type: "number", value: this.width, check: (v: any) => v > 0 && Math.floor(v) == v},
-            {name: "height", type: "number", value: this.height, check: (v: any) => v > 0 && Math.floor(v) == v},
+            {name: "width", type: "number", value: this.width, check: (v: any) => v > 0 && Math.floor(v) === v},
+            {name: "height", type: "number", value: this.height, check: (v: any) => v > 0 && Math.floor(v) === v},
             {name: "diagonal_weights", type: "number", value: this.diagonalWeights}
         ]
     }
@@ -349,11 +349,11 @@ export class GridGraph extends Graph {
     override setProp(name: string, value: any): boolean {
         if (super.setProp(name, value)) return true;
 
-        if (name == "width") {
+        if (name === "width") {
             this.setDimensions(value, this.height);
-        } else if (name == "height") {
+        } else if (name === "height") {
             this.setDimensions(this.width, value);
-        } else if (name == "diagonal_weights") {
+        } else if (name === "diagonal_weights") {
             this.diagonalWeights = value;
             this.updateAllTraversableEdges();
         } else {
@@ -373,7 +373,7 @@ export class GridGraph extends Graph {
     }
     ensureGetNodeByCoords(x: number, y: number) : GraphNode {
         const node = this.getNodeByCoords(x, y);
-        if (node == undefined) throw new RuntimeError(`Error during node fetching. Attempted to read node ${GridGraph.idFromCoords(x, y)}. Node lookup: ${JSON.stringify([...this._nodeLookup.entries()].map(([id, node]) => {return `${id}=>${JSON.stringify(node)}`}))}`);
+        if (node === undefined) throw new RuntimeError(`Error during node fetching. Attempted to read node ${GridGraph.idFromCoords(x, y)}. Node lookup: ${JSON.stringify([...this._nodeLookup.entries()].map(([id, node]) => {return `${id}=>${JSON.stringify(node)}`}))}`);
         return node;
     }
 
@@ -387,7 +387,7 @@ export class GridGraph extends Graph {
         // Edges don't need to be removed, they'll be grayed out if they're not usable
         // All we have to do is ensure that they exist.
         
-        /*if (node.data["traversable"] == false) {
+        /*if (node.data["traversable"] === false) {
             this.clearAllEdgesWith(node.id);
             return;
         }*/
@@ -398,7 +398,7 @@ export class GridGraph extends Graph {
             let target = this.ensureGetNodeByCoords(nx, ny);
             // if (!target.data["traversable"]) continue;
             let edge = this.getEdge(node, target, true)
-            if (edge == undefined) {
+            if (edge === undefined) {
                 edge = new GraphEdgeSimple(this.getNextEdgeIdentifier(), node, target, true);
                 this.addEdge(edge);
             }
@@ -418,14 +418,14 @@ export class GridGraph extends Graph {
         let nodesToRemove = nodes.filter(n => n.x >= newWidth || n.y >= newHeight);
         // Initial check
         for (let node of nodesToRemove) {
-            if (node.id == this.startNode?.id || node.id == this.endNode?.id) {
+            if (node.id === this.startNode?.id || node.id === this.endNode?.id) {
                 throw new Error("Cannot remove start or end node when resizing the grid graph.");
             }
         }
         // Add new nodes
         for (let x = 0; x < newWidth; x++) {
             for (let y = 0; y < newHeight; y++) {
-                if (this.getNodeByCoords(x, y) == undefined) {
+                if (this.getNodeByCoords(x, y) === undefined) {
                     this.createNode(x, y);
                 }
             }
@@ -469,15 +469,15 @@ function getEdgeProperties(edge: GraphEdge): ItemProperty[] {
 function setEdgeProperty(edge: GraphEdge, name: string, value: any): boolean {
     let setAnalysis = canSetProps(getEdgeProperties(edge), {[name]: value});
     if (!setAnalysis.success) throw new Error(setAnalysis.errors.join("\n"));
-    if (name == "weight") {
+    if (name === "weight") {
         edge.weight = value;
-    } else if (name == "bidirectional") {
+    } else if (name === "bidirectional") {
         edge.isBidirectional = value;
-    } else if (name == "flipped") {
+    } else if (name === "flipped") {
         edge.data["flipped"] = value;
-    } else if (name == "highlighted") {
+    } else if (name === "highlighted") {
         edge.data["highlighted"] = value;
-    } else if (name == "forbidden") {
+    } else if (name === "forbidden") {
         edge.data["forbidden"] = value;
     } else {
         return false;
@@ -485,21 +485,21 @@ function setEdgeProperty(edge: GraphEdge, name: string, value: any): boolean {
     return true;
 }
 function getEdgeProperty(edge: GraphEdge, name: string) {
-    if (name == "id") {
+    if (name === "id") {
         return edge.id;
-    } else if (name == "source") {
+    } else if (name === "source") {
         return edge.source.id;
-    } else if (name == "target") {
+    } else if (name === "target") {
         return edge.target.id;
-    } else if (name == "weight") {
+    } else if (name === "weight") {
         return edge.weight;
-    } else if (name == "bidirectional") {
+    } else if (name === "bidirectional") {
         return edge.isBidirectional;
-    } else if (name == "flipped") {
+    } else if (name === "flipped") {
         return edge.data["flipped"];
-    } else if (name == "highlighted") {
+    } else if (name === "highlighted") {
         return edge.data["highlighted"] ?? false;
-    } else if (name == "forbidden") {
+    } else if (name === "forbidden") {
         return edge.data["forbidden"] ?? false;
     }
     throw new Error(`Property ${name} is not implemented for GraphEdge`);
@@ -672,8 +672,8 @@ export class GraphNode implements EditableGraphComponent {
         let result: ItemProperty[] = [
             {name: "id", type: "string", value: this.id, fixed: true},
             {name: "label", type: "string", value: this.data["label"] ?? this.id},
-            {name: "is_start", type: "boolean", value: this._graph.startNode?.id == this.id, trigger: true},
-            {name: "is_goal", type: "boolean", value: this._graph.endNode?.id == this.id, trigger: true},
+            {name: "is_start", type: "boolean", value: this._graph.startNode?.id === this.id, trigger: true},
+            {name: "is_goal", type: "boolean", value: this._graph.endNode?.id === this.id, trigger: true},
             {name: "h", type: "number", value: this.heuristic},
             {name: "traversable", type: "boolean", value: this.traversable},
             {name: "highlighted", type: "boolean", value: this.data["highlighted"] ?? false, hidden: false}
@@ -685,16 +685,16 @@ export class GraphNode implements EditableGraphComponent {
         return result;
     }
     getProp(name: string) {
-        if (name == "id") return this.id;
-        if (name == "is_start") return this._graph.startNode?.id == this.id;
-        if (name == "is_goal") return this._graph.endNode?.id == this.id;
-        if (name == "label") return this.data["label"] ?? this.id;
-        if (name == "h") return this.heuristic;
-        if (name == "traversable") return this.traversable;
-        if (name == "highlighted") return this.data["highlighted"] ?? false;
+        if (name === "id") return this.id;
+        if (name === "is_start") return this._graph.startNode?.id === this.id;
+        if (name === "is_goal") return this._graph.endNode?.id === this.id;
+        if (name === "label") return this.data["label"] ?? this.id;
+        if (name === "h") return this.heuristic;
+        if (name === "traversable") return this.traversable;
+        if (name === "highlighted") return this.data["highlighted"] ?? false;
         if (this._graph instanceof GridGraph) {
-            if (name == "x") return this.x;
-            if (name == "y") return this.y;
+            if (name === "x") return this.x;
+            if (name === "y") return this.y;
         }
         throw new NotImplementedError(`Property ${name} is not implemented for GraphNode`);
     }
@@ -702,19 +702,19 @@ export class GraphNode implements EditableGraphComponent {
         let setAnalysis = canSetProps(this.properties, {[name]: value});
         if (!setAnalysis.success) throw new Error(setAnalysis.errors.join("\n"));
         
-        if (name == "label") {
+        if (name === "label") {
             this.data["label"] = value;
-        } else if (name == "is_start") {
+        } else if (name === "is_start") {
             // Initial checks ensure that this is set to true
             this._graph.startNode = this;
-        } else if (name == "is_goal") {
+        } else if (name === "is_goal") {
             // Initial checks ensure that this is set to true
             this._graph.endNode = this;
-        } else if (name == "h") {
+        } else if (name === "h") {
             this.data["h"] = value;
-        } else if (name == "traversable") {
+        } else if (name === "traversable") {
             this.data["traversable"] = value;
-        } else if (name == "highlighted") {
+        } else if (name === "highlighted") {
             this.data["highlighted"] = value;
         } else {
             return false;
@@ -726,10 +726,10 @@ export class GraphNode implements EditableGraphComponent {
         if (this._graph instanceof GridGraph) { 
             throw new Error("Grid Graph nodes may not be deleted, modify the grid size instead.");
         }
-        if (this._graph.endNode?.id == this.id) {
+        if (this._graph.endNode?.id === this.id) {
             throw new Error("Cannot delete the goal node of the graph. Set another node as the goal first.");
         }
-        if (this._graph.startNode?.id == this.id) {
+        if (this._graph.startNode?.id ===   this.id) {
             throw new Error("Cannot delete the start node of the graph. Set another node as the start first.");
         }
         this._graph.removeNode(this);

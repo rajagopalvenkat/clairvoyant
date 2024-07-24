@@ -11,13 +11,13 @@ export function renderValue(value: any, prefix: string = "", suffix: string = ""
     if (value === undefined || value === null) {
         extraClasses.push("text-code-null");
     }
-    else if (typeof value == "boolean") {
+    else if (typeof value === "boolean") {
         extraClasses.push("text-code-boolean");
     }
-    else if (typeof value == "number") {
+    else if (typeof value === "number") {
         extraClasses.push("text-code-number");
     }
-    else if (typeof value == "string") {
+    else if (typeof value === "string") {
         extraClasses.push("text-code-string");
         let lines = value.split("\n");
         return (
@@ -25,7 +25,7 @@ export function renderValue(value: any, prefix: string = "", suffix: string = ""
                 {prefix}
                 <span className={extraClasses.join(" ")}>
                     {lines.map((line, i) => {
-                        let separator = i == lines.length - 1 ? "" : "\n";
+                        let separator = i === lines.length - 1 ? "" : "\n";
                         return (
                             <p key={i}>{line}{separator}</p>
                         )

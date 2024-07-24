@@ -56,9 +56,9 @@ export default function GraphSearchPage() {
             return;
         };
     
-        if (result.fault == "graph") {
+        if (result.fault === "graph") {
             setGraphErrorMessage(result.message);
-        } else if (result.fault == "solver") {
+        } else if (result.fault === "solver") {
             setAlgoErrorMessage(result.message);
         } else {
             toast.error(result.message);

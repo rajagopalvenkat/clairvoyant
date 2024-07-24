@@ -17,7 +17,7 @@ export default function Header({selectedPage}: {selectedPage: string}) {
         </div>
         <nav className="ps-16 flex flex-row items-stretch">
             {links.map(link => {
-                const selected: boolean = link.id == selectedPage;
+                const selected: boolean = link.id === selectedPage;
                 return (
                     <div key={link.id} className={`flex flex-col justify-center ${selected ? 'bg-gradient-to-b from-secondary-100 to-primary-100 dark:from-secondary-900 dark:to-primary-900' : ''}`}>
                         <Link className={`m-3 ${selected 

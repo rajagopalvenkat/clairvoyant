@@ -7,6 +7,7 @@ import ReactCodeMirror, { EditorView, Extension } from "@uiw/react-codemirror";
 import { syntaxHighlighting } from "@codemirror/language"
 import Image from "next/image";
 import { javascript } from "@codemirror/lang-javascript";
+import CodeView from "./codeView";
 
 // Then register the languages you need
 
@@ -83,8 +84,8 @@ export default function SolutionEditor({problem, errorMessage, solutionHeight, r
             </a>
         </div>
         <div className="flex-grow flex">
-            <ReactCodeMirror style={{height: `${solutionHeight}px`}} lang="javascript" extensions={[themes[currentTheme], syntaxHighlighting(highlights[currentTheme]), langData]} value={algoData} onChange={e => setSolution(e ?? "")}>
-            </ReactCodeMirror>
+            <CodeView style={{height: `${solutionHeight}px`}} lang="javascript" extensions={[themes[currentTheme], syntaxHighlighting(highlights[currentTheme]), langData]} value={algoData} onChange={e => setSolution(e ?? "")}>
+            </CodeView>
         </div>
         {errorMessage ? (<div className="bg-opacity-50 max-h-32 overflow-y-auto border p-1 mt-1 border-solid rounded-md border-danger-500 bg-danger-100 dark:bg-danger-900 text-danger-800 dark:text-danger-200">
             {errorMessage}
