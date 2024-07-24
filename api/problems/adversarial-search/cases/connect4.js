@@ -2,6 +2,8 @@ const initialPosition = "7/7/7/7/7/7 W";
 // equivalent to:     = "-------/-------/-------/-------/-------/------- W"
 // OTHER INTERESTING POSITIONS:
 // late-game draw: "WBWB-W-/BBWW-B-/BBBW-W-/WWWBBB-/WBWWWBB/WWBBBWB W"
+// win by claimeven: "-WWB2W/-BBW2B/-WBB2W/-BWB2B/WWBW2W/BBWBB-W W"
+// win by claimeven early-game: "3B3/3W3/3B3/3W3/2BB-W-/2WB-W- B"
 
 const [M,N,K] = [7,6,4]
 const restriction = (position, x, y) => {
