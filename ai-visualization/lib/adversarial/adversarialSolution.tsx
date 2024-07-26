@@ -2,6 +2,7 @@ import { AdversarialSearchCase, AdversarialSearchPosition, requiredGameMethods, 
 import { EditableComponent, ItemProperty } from "../../lib/utils/properties";
 import { GenericGraph, GraphEdgeSimple, GraphNode } from "../graphs/graph";
 import { ensureError } from "../errors/error";
+import { Queue } from "../collections/queue";
 
 export interface AdversarialSearchAction {
     name?: string;
@@ -98,6 +99,8 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
             return move;
         });
 
+        // this can double-count nodes if they're reached via different paths
+        let createdNodes = moves.length;
         for (let s of moves) {
             // In case of converging lines, we need to check if the node already exists
             let nextNode = this.gameTree.getNodeById(s.position.id);
@@ -107,6 +110,25 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
             }
             let edge = new GraphEdgeSimple(this.gameTree.getNextEdgeIdentifier(), curNode, nextNode, false, {action: s.action});
             this.gameTree.addEdge(edge);
+        }
+
+        // update child counts, we'll use BFS to save on stack depth
+        let visited = new Set([curNode.id]);
+        this.gameTree.getIncomingNodes(curNode);
+        curNode.data["childCount"] = (curNode.data["childCount"] ?? 0) + createdNodes;
+        let q = new Queue<GraphNode>();
+        q.enqueue(curNode);
+        while (!q.isEmpty()) {
+            let next = q.dequeue();
+            let parents = [...this.gameTree.getIncomingNodes(next)];
+            // console.log(`Iteration starting from ${curNode.id} at ${next.id}, queue size: ${q.length}, parent count: ${parents.length}`);
+            // console.log({"child": next, "parents": parents});
+            for (let parent of parents) {
+                if (visited.has(parent.id)) continue;
+                visited.add(parent.id);
+                parent.data["childCount"] = (parent.data["childCount"] ?? 0) + createdNodes;
+                q.enqueue(parent);
+            }
         }
 
         curNode.data["expanded"] = true;

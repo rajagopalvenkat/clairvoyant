@@ -21,7 +21,7 @@ const restriction = (position, x, y) => {
 // some precalculation to fit an MxN grid into a 500x500px square:
 const CellSize = 500 / Math.max(M,N);
 const [BoardW, BoardH] = [M * CellSize, N * CellSize];
-const [BoardX, BoardY] = [500 - BoardW, 750 - BoardH];
+const [BoardX, BoardY] = [250 - BoardW / 2, 500 - BoardH / 2];
 
 (GameBase, PositionBase) => {
     class Position extends PositionBase {
@@ -36,7 +36,6 @@ const [BoardX, BoardY] = [500 - BoardW, 750 - BoardH];
             this.notation = notation;
             let [squares, next] = MNKGame.readNotation(notation);
             this.squares = squares;
-            console.log(this.squares);
             this.next = next;
             let winner = this.getWinnerCharacter();
             if (winner === "-") {
@@ -57,6 +56,7 @@ const [BoardX, BoardY] = [500 - BoardW, 750 - BoardH];
             let helper = this.drawHelper(ctx);
             helper.drawGrid(BoardX, BoardY, BoardW, BoardH, M, N, "#808080");
             
+            const pieceCenterShadeColor = "#ffffff30";
             for (let x = 0; x < M; x++) {
                 for (let y = 0; y < N; y++) {
                     let text = this.squares[y][x];
@@ -65,7 +65,7 @@ const [BoardX, BoardY] = [500 - BoardW, 750 - BoardH];
                     let centerY = y * CellSize + CellSize / 2 + BoardY;
                     let color = this.game.colors[text === "W" ? 0 : 1];
                     helper.drawCircle(centerX, centerY, CellSize / 2 - 10, color);
-                    helper.drawCircle(centerX, centerY, CellSize / 2 - 15, "#ffffff30");
+                    helper.drawCircle(centerX, centerY, CellSize / 2 - 15, pieceCenterShadeColor);
                 }
             }
 
@@ -79,6 +79,14 @@ const [BoardX, BoardY] = [500 - BoardW, 750 - BoardH];
                     "#00ff00", 10
                 );
                 ctx.lineWidth = 1;
+            } else if (!this.terminal) {
+                let centerX = 250;
+                let centerY = BoardY / 2;
+                let scale = 2;
+                let r = (CellSize - 20) * scale / 2;
+                let color = this.game.colors[this.next === "W" ? 0 : 1];
+                helper.drawCircle(centerX, centerY, r, color);
+                helper.drawCircle(centerX, centerY, r - 5 * scale, pieceCenterShadeColor);
             }
         }
     
@@ -169,7 +177,7 @@ const [BoardX, BoardY] = [500 - BoardW, 750 - BoardH];
             }
             return true;
         }
-    
+
         isTerminal() {
             return this.terminal;
         }
@@ -234,7 +242,7 @@ const [BoardX, BoardY] = [500 - BoardW, 750 - BoardH];
         }
     
         getNotation(squares, next) {
-            let rows = []
+            let rows = [];
             for (let y = 0; y < N; y++) {
                 let blankCnt = 0;
                 let dynRow = [];
@@ -244,11 +252,13 @@ const [BoardX, BoardY] = [500 - BoardW, 750 - BoardH];
                         blankCnt++;
                         continue;
                     }
-                    if (blankCnt > 0) dynRow.push(...new Array(`${blankCnt}`)); // push digits of the characters making up the count
+                    if (blankCnt == 1) dynRow.push("-");
+                    else if (blankCnt > 1) dynRow.push(...new Array(`${blankCnt}`)); // push digits of the characters making up the count
                     blankCnt = 0;
                     dynRow.push(char);
                 }
-                if (blankCnt > 0) dynRow.push(...new Array(`${blankCnt}`)); // push digits of the characters making up the count
+                if (blankCnt == 1) dynRow.push("-");
+                else if (blankCnt > 1) dynRow.push(...new Array(`${blankCnt}`)); // push digits of the characters making up the count
                 rows.push(dynRow.join(''));
             }
             return `${rows.join('/')} ${next}`;
@@ -260,7 +270,6 @@ const [BoardX, BoardY] = [500 - BoardW, 750 - BoardH];
             let oldVal = position.squares[y][x]; // record old value at placed position
             position.squares[y][x] = position.next; // perform in-place change to formulate notation
             let notation = this.getNotation(position.squares, position.next === "W" ? "B" : "W");
-            console.log(notation);
             position.squares[y][x] = oldVal; // undo change
             return new Position(this, notation);
         }
@@ -271,10 +280,9 @@ const [BoardX, BoardY] = [500 - BoardW, 750 - BoardH];
             const BLANK_PIECE = "-";
             // PREPROCESSING STEP
             notation = notation.toUpperCase();
-            notation = notation.replace(/\s+/g, " ");
 
             // HANDLING SEGMENTS
-            let segments = notation.split(" ");
+            let segments = notation.split(/\s+/g);
             if (segments.length !== 2) throw new SyntaxError("Given notation needs to be a board state followed a turn marker, separated by a space.");
             let [boardNotation, next] = segments
             // ensure the "next" turn is one of VALID_PIECES
@@ -312,6 +320,6 @@ const [BoardX, BoardY] = [500 - BoardW, 750 - BoardH];
             return [squares, next];
         }
     }
-
+    
     return new MNKGame();
 }

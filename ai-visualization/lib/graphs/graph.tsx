@@ -257,7 +257,7 @@ export abstract class Graph implements EditableComponent {
     }
     public *getIncomingNodes(node: GraphNode): Generator<GraphNode> {
         for (let edge of this.getIncomingEdges(node)) {
-            yield edge.target;
+            yield edge.source;
         }
     }
 

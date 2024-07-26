@@ -74,6 +74,7 @@ const initialPosition = "B:W21,22,23,24,25,26,27,28,29,30,31,32:B1,2,3,4,5,6,7,8
             let helper = this.drawHelper(ctx);
             // draw a centered 500px by 500px, 8 by 8 grid
             helper.drawGrid(0, 250, 500, 500, 8, 8, "#808080");
+            const w = 500 / 8;
             for (let n = 0; n < 32; n++) {
                 let [i,j] = coordinates[n];
                 let x = j * w + w / 2;

@@ -18,7 +18,7 @@ export default function Canvas({draw, height, width, className}: {
                     draw(ctx);
                 } catch (err) {
                     let error = ensureError(err);
-                    toast.error(error.message);
+                    toast.error(error.stack);
                 }
             }
         }

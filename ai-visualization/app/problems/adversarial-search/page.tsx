@@ -17,6 +17,7 @@ import { PropertyInspector } from "@/app/components/data/propertyEditor";
 
 import "./adversarial-search.css";
 import { ItemProperty } from "@/lib/utils/properties";
+import DynamicLabel from "@/app/components/text/dynamicLabel";
 
 const defaultDraw = (ctx: CanvasRenderingContext2D) => {}
 
@@ -117,7 +118,6 @@ export default function GraphSearchPage() {
             toast.success("Expansion limit reached");
         }
         let playSequence = solver.getPlaySequence(initialPos);
-        console.log(playSequence);
         // highlight move sequence
         let curNode = solver.gameTree.getNodeById(initialPos.id);
         for (let move of playSequence) {
@@ -143,6 +143,7 @@ export default function GraphSearchPage() {
             console.log(`Expanding ${shownPosition?.id}`);
             if (shownPosition) solver?.expand(shownPosition);
             setGraphRenderKey(graphRenderKey + 1);
+
             return;
         }
         shownPosition?.setProp(property, newValue);
@@ -202,6 +203,12 @@ export default function GraphSearchPage() {
                 <div className="relative overflow-hidden flex flex-row p-3 m-2 rounded-md border-accent dark:border-accent-200 border-solid border flex-grow">
                     <div className="tree-inspector max-h-[calc(100dvh-110px)]">
                         <TreeView renderKey={graphRenderKey} graph={solver?.gameTree ?? null} onNodeSelected={onNodeSelected}></TreeView>
+                        { shownPosition !== null ? 
+                            <div className="position-inspector w-full">
+                                <DynamicLabel text={shownPosition.id}></DynamicLabel>
+                                <PropertyInspector properties={extendedProperties} onChange={(p,o,v) => onPositionPropertyChange(p,o,v)}></PropertyInspector>
+                            </div> : <></>
+                        }
                     </div>
                     <div className="game-view w-1/2 max-h-[calc(100dvh-110px)] flex justify-center align-middle">
                         <div className="relative w-full h-full">
@@ -210,16 +217,11 @@ export default function GraphSearchPage() {
                         </div>
                     </div>
                     { game ? 
-                        <div className="game-inspector">
-                            <PropertyInspector properties={gameProperties} onChange={(p,o,v) => onGamePropertyChange(p,o,v)}></PropertyInspector>
-                        </div> : <></>
+                            <div className="game-inspector">
+                                <PropertyInspector properties={gameProperties} onChange={(p,o,v) => onGamePropertyChange(p,o,v)}></PropertyInspector>
+                            </div> : <></>
                     }
-                    { shownPosition !== null ? 
-                        <div className="position-inspector">
-                            <h3>{shownPosition.id}</h3>
-                            <PropertyInspector properties={extendedProperties} onChange={(p,o,v) => onPositionPropertyChange(p,o,v)}></PropertyInspector>
-                        </div> : <></>
-                    }
+                    
                     { solver ? 
                         <div className="controls">
                             <button onClick={() => runExpansion(1)}>Expand</button>

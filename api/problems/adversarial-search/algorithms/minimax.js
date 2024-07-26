@@ -71,13 +71,14 @@
                 return node.utility;
             }
             // expansion budget unavailable for this node
-            if (!node.moves) {
+            if (!node.moves || node.moves.length == 0) {
                 // here, you can return a heuristic value for the node
                 // or you can just return 0 to assume a draw
                 node.utility = 0;
                 if (typeof node.getHeuristic === "function") {
                     node.utility = node.getHeuristic();
                 }
+                console.log(`Calculated heuristic utility of ${node.id} = ${node.utility}`);
                 return node.utility;
             }
             let currentPlayer = node.getPlayer();
@@ -87,7 +88,7 @@
             } else if (currentPlayer === -1) {
                 maximizingPlayer = false;
             } else {
-                throw new Error("Invalid player for minimax algorithm.");
+                throw new Error(`Invalid player for minimax algorithm: ${currentPlayer}`);
             }
 
             node.utility = maximizingPlayer ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;

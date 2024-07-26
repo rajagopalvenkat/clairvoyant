@@ -5,6 +5,7 @@ import Select from "react-select";
 import "./propertyEditor.css"
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import CustomCheckbox from "./customCheckbox";
 
 export function PropertyInspector({properties, onChange}: {
     properties: ItemProperty[],
@@ -130,7 +131,7 @@ export function PropertyEditor({property, onChange}: {
     if (property.type === "boolean") {
         if (!property.trigger) {
             return (
-                <input type="checkbox" disabled={property.fixed} checked={property.value} onChange={(e) => onChange(e.target.checked)} />
+                <CustomCheckbox uncheckedX className="py-1.5 px-0" disabled={property.fixed} checked={property.value} onChange={(e) => onChange(e.target.checked)} />
             )
         } 
         else {
@@ -152,12 +153,12 @@ export function PropertyEditor({property, onChange}: {
         }
         if (property.dynamic || property.fixed) {
             return (
-                <textarea disabled={property.fixed} value={internalValue} onChange={(e) => {applyFunc(e.target.value)}} />
+                <textarea className="flex-grow" disabled={property.fixed} value={internalValue} onChange={(e) => {applyFunc(e.target.value)}} />
             )
         }
         return (
             <>
-                <textarea value={internalValue} onChange={(e) => setInternalValue(e.target.value)} />
+                <textarea className="flex-grow" value={internalValue} onChange={(e) => setInternalValue(e.target.value)} />
                 <PropertySetButton property={property} internalValue={internalValue} onPress={() => applyFunc(internalValue)} />
             </>
         )

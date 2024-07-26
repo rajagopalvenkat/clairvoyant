@@ -176,7 +176,7 @@ export default function TreeView({graph, onNodeSelected = (x) => {}, renderKey}:
             if (expandedNodes.has(node.id)) {
                 q.push(...[...graph.getAdjacentNodes(node)].map(n => ({node: n, distance: distance + 1})));
             } else if (!pos.isTerminal()) {
-                let children = countChildren(node);
+                let children = node.data["childCount"] ?? countChildren(node);
                 label = `${label} (${children})`.trimStart();
             }
             data.nodes.push({id: node.id, label: label, level: distance, ...getNodeAttributes(node, visGraphOptions)});
