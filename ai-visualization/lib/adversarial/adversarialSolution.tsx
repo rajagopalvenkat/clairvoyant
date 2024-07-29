@@ -23,10 +23,15 @@ export class AdversarialExpansion {
     }
 }
 
+export type AdversarialAlgorithmStep = {
+    value: any
+};
+
 export abstract class AdversarialSearchSolution implements EditableComponent {
     game!: AdversarialSearchCase;
     gameTree!: GenericGraph; 
-    allowedExpansions: number = 1;
+    expansionBudget: number = 0;
+    algorithmBudget: number = 0;
     initialized: boolean = false;
     bestAction?: AdversarialSearchAction;
     constructor(game: AdversarialSearchCase) {
@@ -64,7 +69,7 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
         return false;
     }
 
-    abstract getPlaySequence(position: AdversarialSearchPosition): AdversarialSearchMove[];
+    abstract runAlgorithm(position: AdversarialSearchPosition): Generator<AdversarialAlgorithmStep>;
     abstract runExpansion(position: AdversarialSearchPosition): Generator<AdversarialExpansion>;
     expand(position: AdversarialSearchPosition): AdversarialExpansion {
         // Already expanded and cached to position
@@ -87,8 +92,8 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
             return {position: position, moves: moves};
         }
 
-        if (this.allowedExpansions-- === 0) {
-            this.allowedExpansions = 0;
+        if (this.expansionBudget-- === 0) {
+            this.expansionBudget = 0;
             return {position: position, moves: []};
         }
 
@@ -99,14 +104,17 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
             return move;
         });
 
-        // this can double-count nodes if they're reached via different paths
-        let createdNodes = moves.length;
+        // this can double-count leaf nodes if they're reached via different paths (consider this transpositions)
+        let addedPaths = moves.length - 1;
         for (let s of moves) {
             // In case of converging lines, we need to check if the node already exists
             let nextNode = this.gameTree.getNodeById(s.position.id);
             if (!nextNode) {
                 nextNode = new GraphNode(this.gameTree, s.position.id, 0, 0, {position: s.position, expanded: false});
                 this.gameTree.addNode(nextNode);
+            } else {
+                // make sure move points to already-existing position
+                s.position = nextNode.data["position"];
             }
             let edge = new GraphEdgeSimple(this.gameTree.getNextEdgeIdentifier(), curNode, nextNode, false, {action: s.action});
             this.gameTree.addEdge(edge);
@@ -115,7 +123,7 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
         // update child counts, we'll use BFS to save on stack depth
         let visited = new Set([curNode.id]);
         this.gameTree.getIncomingNodes(curNode);
-        curNode.data["childCount"] = (curNode.data["childCount"] ?? 0) + createdNodes;
+        curNode.data["pathCount"] = (curNode.data["pathCount"] ?? 0) + addedPaths;
         let q = new Queue<GraphNode>();
         q.enqueue(curNode);
         while (!q.isEmpty()) {
@@ -126,7 +134,7 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
             for (let parent of parents) {
                 if (visited.has(parent.id)) continue;
                 visited.add(parent.id);
-                parent.data["childCount"] = (parent.data["childCount"] ?? 0) + createdNodes;
+                parent.data["pathCount"] = (parent.data["pathCount"] ?? 0) + addedPaths;
                 q.enqueue(parent);
             }
         }
@@ -135,11 +143,22 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
         position.moves = moves;
         return {position: position, moves: moves};
     }
+
+    algoStep(debugValue: any = undefined): AdversarialAlgorithmStep {
+        this.algorithmBudget--;
+        return {value: debugValue}
+    }
+
+    resetAlgorithmState() {
+        for (let node of this.gameTree.getAllNodes()) {
+            (node.data["position"] as AdversarialSearchPosition).utility = undefined;
+        }
+    }
 }
 
 const requiredSolverMethods = [
-    {name: "getPlaySequence", args: 1},
-    {name: "runExpansion", args: 1}
+    {name: "runExpansion", args: 1},
+    {name: "runAlgorithm", args: 1}
 ]
 
 export class AdversarialSearchBuildError extends Error {

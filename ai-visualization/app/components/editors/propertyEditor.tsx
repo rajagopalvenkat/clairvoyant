@@ -5,7 +5,7 @@ import Select from "react-select";
 import "./propertyEditor.css"
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import CustomCheckbox from "./customCheckbox";
+import CustomCheckbox from "../controls/customCheckbox";
 
 export function PropertyInspector({properties, onChange}: {
     properties: ItemProperty[],
@@ -26,8 +26,8 @@ export function PropertyField({property, onChange}: {
 }) {
     let displayName = property.display ?? property.name;
     return (
-        <div className="flex flex-row items-center mb-1">
-            <label className="text-nowrap flex-grow text-secondary-800 dark:text-secondary-200 mr-3">{displayName}</label>
+        <div className="flex flex-row items-center mb-1 justify-between">
+            <label className="text-nowrap flex-grow-0 text-secondary-800 dark:text-secondary-200 mr-3">{displayName}</label>
             <PropertyEditor property={property} onChange={onChange} />
         </div>
     )
@@ -103,14 +103,20 @@ export function PropertyEditor({property, onChange}: {
         )
     }
     if (property.type === "number") {
+        let inputSize = 5;
+        let internalValueNum = parseFloat(internalValue);
+        if (!isNaN(internalValueNum)) {
+            let wantedSize = Math.log10(Math.abs(internalValueNum));
+            inputSize = Math.ceil(Math.max(5, Math.min(20, wantedSize)));
+        }
         if (property.dynamic) {
             return (
-                <input type="number" value={internalValue} onChange={(e) => onChangeDynamicEnsureFloat(e.target.value)} />
+                <input type="number" style={{width: `${inputSize * 0.65 + 1}em`}} value={internalValue} onChange={(e) => onChangeDynamicEnsureFloat(e.target.value)} />
             )
         }
         return (
             <>
-                <input type="number" disabled={property.fixed} value={internalValue} onChange={(e) => setInternalValue(e.target.value)} />
+                <input type="number" style={{width: `${inputSize * 0.65 + 1}em`}} disabled={property.fixed} value={internalValue} onChange={(e) => setInternalValue(e.target.value)} />
                 <PropertySetButton property={property} internalValue={internalValue} onPress={() => onChangeEnsureFloat(internalValue)} />
             </>
         )
@@ -153,7 +159,7 @@ export function PropertyEditor({property, onChange}: {
         }
         if (property.dynamic || property.fixed) {
             return (
-                <textarea className="flex-grow" disabled={property.fixed} value={internalValue} onChange={(e) => {applyFunc(e.target.value)}} />
+                <textarea className="flex-grow text-black dark:text-white p-1" disabled={property.fixed} value={internalValue} onChange={(e) => {applyFunc(e.target.value)}} />
             )
         }
         return (

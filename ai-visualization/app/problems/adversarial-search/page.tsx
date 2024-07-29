@@ -2,8 +2,8 @@
 
 import Header from "@/app/components/header";
 import TreeView from "./components/treeView";
-import SolutionEditor from "@/app/components/data/solutionEditor";
-import CaseEditor from "@/app/components/data/problemEditor";
+import SolutionEditor from "@/app/components/editors/solutionEditor";
+import CaseEditor from "@/app/components/editors/problemEditor";
 import { GenericGraph, Graph, GraphEdgeSimple, GraphNode, GridGraph } from "@/lib/graphs/graph";
 import { GraphSearchResult, GraphSearchSolution, buildGraphSearchSolution } from "@/lib/graphs/graphsolution"; // Import the missing class
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -11,19 +11,29 @@ import { ensureError } from "@/lib/errors/error";
 import { HDivider, VDivider } from "@/app/components/divider";
 import { toast } from "react-toastify";
 import Canvas from "@/app/components/graphics/canvas";
-import { AdversarialExpansion, AdversarialSearchBuildError, AdversarialSearchSolution, buildAdversarialSolution } from "@/lib/adversarial/adversarialSolution";
+import { AdversarialAlgorithmStep, AdversarialExpansion, AdversarialSearchBuildError, AdversarialSearchSolution, buildAdversarialSolution } from "@/lib/adversarial/adversarialSolution";
 import { AdversarialSearchCase, AdversarialSearchPosition } from "@/lib/adversarial/adversarialCase";
-import { PropertyInspector } from "@/app/components/data/propertyEditor";
+import { PropertyInspector } from "@/app/components/editors/propertyEditor";
 
 import "./adversarial-search.css";
 import { ItemProperty } from "@/lib/utils/properties";
 import DynamicLabel from "@/app/components/text/dynamicLabel";
+import PlayControls from "@/app/components/controls/playControls";
 
 const defaultDraw = (ctx: CanvasRenderingContext2D) => {}
+const MAX_EXPANSION_STEP_SIZE = 100;
+const MAX_ALGORITHM_STEP_SIZE = 100;
+const TICK_INTERVAL_MS = 25; // 40 times per second
+const TICK_LOGIC_TIMEOUT_MS = 20;
+// configured speed ~4000 iterations per second
+const GRAPH_UPDATE_INTERVAL_MS = 1500
 
-type ExpansionGenerator = {
-    generator: Generator<AdversarialExpansion, void>,
-    initialPosition: AdversarialSearchPosition
+type ExpansionGenerator = Generator<AdversarialExpansion, void>;
+type AlgorithmGenerator = Generator<AdversarialAlgorithmStep>;
+
+interface TickData {}
+interface ExternalGraphData {
+    dirty: boolean
 }
 
 export default function GraphSearchPage() {
@@ -35,19 +45,137 @@ export default function GraphSearchPage() {
     let [algoData, setAlgoData] = useState("");
     let [caseData, setCaseData] = useState("");
     let [graphRenderKey, setGraphRenderKey] = useState(0);
+    let [canvasRenderKey, setCanvasRenderKey] = useState(0);
     
     let [game, setGame] = useState<AdversarialSearchCase | null>(null);
     let [solver, setSolver] = useState<AdversarialSearchSolution | null>(null);
     let [expansionGenerator, setExpansionGenerator] = useState<ExpansionGenerator | null>(null);
+    let [algorithmGenerator, setAlgorithmGenerator] = useState<AlgorithmGenerator | null>(null);
+    let [tickData, setTickData] = useState<TickData>({});
+    let [externalGraphData, setExternalGraphData] = useState<ExternalGraphData>({
+        "dirty": false
+    })
+    let [expansionPlaying, setExpansionPlaying] = useState<boolean>(false);
+    let [algorithmPlaying, setAlgorithmPlaying] = useState<boolean>(false);
 
-    // visualization
-    let [initialPosition, setInitialPosition] = useState<AdversarialSearchPosition | null>(null);
     let [shownPosition, setShownPosition] = useState<AdversarialSearchPosition | null>(null);
 
     // property management
     let [gameProperties, setGameProperties] = useState<ItemProperty[]>([])
 
-    function runAlgo() {
+    // ticking
+    let doTick = useCallback(() => {
+        if (!solver || !game) return;
+        //console.log(`running tick with budgets (${solver.expansionBudget}, ${solver.algorithmBudget})`)
+        let tickStartTime = Date.now();
+
+        // handle nullable fields and reset the generator/initial position if they're unset
+        let internalInitialPosition: AdversarialSearchPosition | undefined;
+
+        let internalExpansionGenerator = expansionGenerator;
+        if (!internalExpansionGenerator) {
+            internalInitialPosition = game.getInitialPosition();
+            internalExpansionGenerator = solver.runExpansion(internalInitialPosition)
+            setExpansionGenerator(internalExpansionGenerator);
+        }
+
+        const minExpansionBudgetInIteration = Math.max(0, solver.expansionBudget - MAX_EXPANSION_STEP_SIZE);
+        let anyExpansionsRun = false;
+        while (solver.expansionBudget > minExpansionBudgetInIteration) {
+            if (Date.now() - tickStartTime > TICK_LOGIC_TIMEOUT_MS) {
+                // abort immediately
+                return;
+            }
+
+            let action : IteratorResult<AdversarialExpansion>;
+            try {
+                action = internalExpansionGenerator.next();
+            } catch (err) {
+                let error = ensureError(err);
+                toast.error(error.stack);
+                externalGraphData.dirty = true;
+                break;
+            }
+
+            if (action.done) {
+                toast.success("Expansion complete");
+                solver.expansionBudget = 0;
+                externalGraphData.dirty = true;
+                break;
+            } else {
+                anyExpansionsRun = true;  
+                externalGraphData.dirty = true;
+            }
+        }
+
+        setExpansionPlaying(solver.expansionBudget > 0);
+
+        // if any expansions happened and there's any progress on the algorithm, reset and do not run any algorithm steps
+        if (anyExpansionsRun && algorithmGenerator) {
+            solver.resetAlgorithmState();
+            setAlgorithmGenerator(null);
+            return;
+        }
+        // do not keep running if no algorithm budget exists
+        if (solver.algorithmBudget === 0) return;
+
+        // handle nullable fields and reset the generator/initial position if they're unset
+        let internalAlgorithmGenerator = algorithmGenerator;
+        if (!internalAlgorithmGenerator) {
+            if (internalInitialPosition === undefined) internalInitialPosition = game.getInitialPosition();
+            internalAlgorithmGenerator = solver.runAlgorithm(internalInitialPosition);
+            setAlgorithmGenerator(internalAlgorithmGenerator);
+        }
+
+        const minAlgorithmBudgetInIteration = Math.max(0, solver.expansionBudget - MAX_ALGORITHM_STEP_SIZE);
+        while (solver.algorithmBudget > minAlgorithmBudgetInIteration) {
+            if (Date.now() - tickStartTime > TICK_LOGIC_TIMEOUT_MS) {
+                // abort immediately
+                return;
+            }
+
+            let result : IteratorResult<AdversarialAlgorithmStep>;
+            try {
+                result = internalAlgorithmGenerator!.next();
+            } catch (err) {
+                let error = ensureError(err);
+                externalGraphData.dirty = true;
+                toast.error(error.stack);
+                break;
+            }
+
+            if (result.done) {
+                toast.success("Algorithm complete");
+                externalGraphData.dirty = true;
+                solver.algorithmBudget = 0;
+                break;
+            } else {
+                externalGraphData.dirty = true;
+            }
+        }
+        
+        setAlgorithmPlaying(solver.algorithmBudget > 0);
+    }, [tickData, game, solver, expansionGenerator, algorithmGenerator, externalGraphData])
+
+    useEffect(() => {
+        const intervalId = setInterval(doTick, TICK_INTERVAL_MS);
+        console.log(`Updated tick function, interval ID = ${intervalId}`);
+        return () => {clearInterval(intervalId);}
+    }, [doTick]);
+
+    // DYNAMIC GRAPH UPDATES
+    let updateGraph = useCallback(() => {
+        if (!externalGraphData.dirty) return;
+        setGraphRenderKey(k => k + 1);
+        externalGraphData.dirty = false;
+    }, [externalGraphData])
+
+    useEffect(() => {
+        const intervalId = setInterval(updateGraph, GRAPH_UPDATE_INTERVAL_MS);
+        return () => {clearInterval(intervalId);}
+    }, [updateGraph])
+
+    function runGameSetup() {
         try {
             let [solver, game] = buildAdversarialSolution(algoData, caseData);
             setSolver(solver);
@@ -55,6 +183,7 @@ export default function GraphSearchPage() {
             initializeGame(game, solver);
             setGameProperties(game.properties);
             setExpansionGenerator(null);
+            setAlgorithmGenerator(null);
             setCaseErrorMessage("");
             setAlgoErrorMessage("");
         } catch (err) {
@@ -62,9 +191,9 @@ export default function GraphSearchPage() {
             if (error instanceof AdversarialSearchBuildError) {
                 let fault = error.fault;
                 if (fault === "solver") {
-                    setAlgoErrorMessage(error.message);
+                    setAlgoErrorMessage(error.stack ?? error.message);
                 } else if (fault === "case") {
-                    setCaseErrorMessage(error.message);
+                    setCaseErrorMessage(error.stack ?? error.message);
                 }
             }
             else 
@@ -79,71 +208,40 @@ export default function GraphSearchPage() {
         setShownPosition(solver.gameTree.startNode!.data.position);
     }
 
-    let runExpansion = useCallback((maxExpansions: number = Infinity, timeoutMs: number = 1000) => {
-        if (!game || !solver) {
+    type RunningParameters = {expansionBudget?: number, algorithmBudget?: number};
+    let setRunningParameters = useCallback((parameters: RunningParameters) => {
+        if (!solver || !game) {
+            toast.error("This requires the solver and game to be properly loaded.");
             return;
         }
-
-        let startTime = Date.now();
-        let initialPos = initialPosition ?? game.getInitialPosition();
-        console.log(initialPos);
-        solver.allowedExpansions = maxExpansions;
-        let expander = expansionGenerator;
-        if (!expansionGenerator || expansionGenerator.initialPosition.id !== initialPos.id) {
-            expander = {
-                generator: solver.runExpansion(initialPos),
-                initialPosition: initialPos
-            }
-            setExpansionGenerator(expander);
+        if (parameters.expansionBudget !== undefined) solver.expansionBudget = parameters.expansionBudget;
+        if (parameters.algorithmBudget !== undefined) solver.algorithmBudget = parameters.algorithmBudget;
+        setExpansionPlaying(solver.expansionBudget > 0);
+        setAlgorithmPlaying(solver.algorithmBudget > 0);
+    }, [solver, game]);
+    let modifyRunningParameters = useCallback((parameters: RunningParameters) => {
+        if (!solver || !game) {
+            toast.error("This requires the solver and game to be properly loaded.");
+            return;
         }
-        while (solver.allowedExpansions > 0) {
-            let action : IteratorResult<AdversarialExpansion>;
-            try {
-                action = expander!.generator.next();
-            } catch (err) {
-                let error = ensureError(err);
-                toast.error(error.stack);
-                break;
-            }
-            if (action.done) {
-                toast.success("Expansion complete");
-                break;
-            }
-            if (Date.now() - startTime > timeoutMs) {
-                toast.error("Timeout reached");
-                break;
-            }
+        let alteredParams: RunningParameters = {}
+        for (let key of Object.keys(parameters)) {
+            let k = key as keyof RunningParameters;
+            alteredParams[k] = parameters[k]! + solver[k];
         }
-        if (solver.allowedExpansions <= 0) {
-            toast.success("Expansion limit reached");
-        }
-        let playSequence = solver.getPlaySequence(initialPos);
-        // highlight move sequence
-        let curNode = solver.gameTree.getNodeById(initialPos.id);
-        for (let move of playSequence) {
-            if (!curNode) break;
-            let nextNode = solver.gameTree.getNodeById(move.position.id);
-            if (!nextNode) break;
-            let edge = solver.gameTree.getEdge(curNode, nextNode);
-            if (edge) {
-                edge.setProp("highlight", true);
-            }
-            curNode = nextNode;
-        }
-        console.log(solver);
-        setGraphRenderKey(graphRenderKey + 1);
-    }, [game, solver, initialPosition, graphRenderKey]);
+        setRunningParameters(alteredParams);
+    }, [solver, game])
 
     const onGamePropertyChange = useCallback((property: string, oldValue: any, newValue: any) => {
         game?.setProp(property, newValue);
         setGameProperties(game?.properties ?? []);
-    }, [game, graphRenderKey, shownPosition, solver]);
+        setCanvasRenderKey(n => n + 1);
+    }, [game, solver]);
     const onPositionPropertyChange = useCallback((property: string, oldValue: any, newValue: any) => {
         if (property === "__expand") {
             console.log(`Expanding ${shownPosition?.id}`);
             if (shownPosition) solver?.expand(shownPosition);
-            setGraphRenderKey(graphRenderKey + 1);
-
+            setGraphRenderKey(n => n + 1);
             return;
         }
         shownPosition?.setProp(property, newValue);
@@ -191,7 +289,7 @@ export default function GraphSearchPage() {
             <Header selectedPage="adversarialsearch"></Header>
             <div className="flex flex-row items-stretch flex-grow">
                 <div className="flex flex-col justify-center" style={{"width": `${leftWidth}px`}}>
-                    <SolutionEditor problem="adversarial-search" solutionHeight={solHeight} onSolutionChanged={onAlgoDataChanged} runner={runAlgo} errorMessage={algoErrorMessage}></SolutionEditor>
+                    <SolutionEditor problem="adversarial-search" solutionHeight={solHeight} onSolutionChanged={onAlgoDataChanged} runner={runGameSetup} errorMessage={algoErrorMessage}></SolutionEditor>
                     <HDivider onWidthChangeRequest={function (v: number): void {
                         setSolHeight(solHeight + v);
                     } }></HDivider>
@@ -212,22 +310,34 @@ export default function GraphSearchPage() {
                     </div>
                     <div className="game-view w-1/2 max-h-[calc(100dvh-110px)] flex justify-center align-middle">
                         <div className="relative w-full h-full">
-                            <Canvas className="mx-auto max-h-full max-w-full" draw={positionRender} width={500} height={1000}></Canvas>
+                            <Canvas className="mx-auto max-h-full max-w-full" renderKey={canvasRenderKey} draw={positionRender} width={500} height={1000}></Canvas>
                             <div className="absolute left-0 top-0 h-full w-full" id="gameDiv"></div>
                         </div>
                     </div>
                     { game ? 
-                            <div className="game-inspector">
-                                <PropertyInspector properties={gameProperties} onChange={(p,o,v) => onGamePropertyChange(p,o,v)}></PropertyInspector>
-                            </div> : <></>
+                        <div className="game-inspector">
+                            <PropertyInspector properties={gameProperties} onChange={(p,o,v) => onGamePropertyChange(p,o,v)}></PropertyInspector>
+                        </div> : <></>
                     }
                     
                     { solver ? 
-                        <div className="controls">
-                            <button onClick={() => runExpansion(1)}>Expand</button>
-                            <button onClick={() => runExpansion(5)}>Expand 5</button>
-                            <button onClick={() => runExpansion(10)}>Expand 10</button>
-                            <button onClick={() => runExpansion(Number.MAX_SAFE_INTEGER)}>Expand Unlimited</button>
+                        <div className="controls flex flex-col gap-2">
+                            <div className="bg-primary-200 dark:bg-primary-800 rounded-2xl align-middle">
+                                <h3>Expansion ({solver.expansionBudget})</h3>
+                                <PlayControls playing={expansionPlaying} color={"primary"}
+                                    play={() => setRunningParameters({"expansionBudget": Number.MAX_SAFE_INTEGER})}
+                                    stop={() => setRunningParameters({"expansionBudget": 0})}
+                                    step={() => modifyRunningParameters({"expansionBudget": 1})}
+                                />
+                            </div>
+                            <div className="bg-primary-200 dark:bg-primary-800 rounded-2xl">
+                                <h3>Algorithm ({solver.algorithmBudget})</h3>
+                                <PlayControls playing={algorithmPlaying} color={"primary"}
+                                    play={() => setRunningParameters({"algorithmBudget": Number.MAX_SAFE_INTEGER})}
+                                    stop={() => setRunningParameters({"algorithmBudget": 0})}
+                                    step={() => modifyRunningParameters({"algorithmBudget": 1})}
+                                />
+                            </div>
                         </div> : <></>
                     }
                 </div>

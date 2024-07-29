@@ -1,6 +1,6 @@
 import { ConfirmDialog, confirmable, createConfirmation } from "react-confirm";
 import { ItemProperty } from "@/lib/utils/properties";
-import { PropertyInspector } from "../data/propertyEditor";
+import { PropertyInspector } from "../editors/propertyEditor";
 import { useEffect, useState } from "react";
 import DialogWrapper from "./dialogWrapper";
 import { buttonStyleClassNames } from "@/lib/statics/styleConstants";

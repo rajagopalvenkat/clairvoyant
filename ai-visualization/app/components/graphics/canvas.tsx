@@ -1,15 +1,16 @@
 import { ensureError } from '@/lib/errors/error';
-import React from 'react';
+import { useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 
-export default function Canvas({draw, height, width, className}: {
+export default function Canvas({draw, height, width, className, renderKey}: {
     draw: (ctx: CanvasRenderingContext2D) => void;
     height: number;
     width: number;
+    renderKey?: number,
     className?: string;
 }) {
-    let canvasRef = React.useRef<HTMLCanvasElement>(null);
-    React.useEffect(() => {
+    let canvasRef = useRef<HTMLCanvasElement>(null);
+    useEffect(() => {
         let canvas = canvasRef.current;
         if (canvas) {
             let ctx = canvas.getContext('2d');
@@ -22,6 +23,6 @@ export default function Canvas({draw, height, width, className}: {
                 }
             }
         }
-    }, [draw]);
+    }, [draw, renderKey]);
     return <canvas className={className} ref={canvasRef} height={height} width={width} />
 }

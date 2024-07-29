@@ -3,7 +3,7 @@ import { Graph, GraphEdge, GraphNode } from "@/lib/graphs/graph"
 import { colorLerp, colorWithAlpha } from "@/lib/utils/colors";
 import { useCallback, useEffect, useState } from "react"
 import VisGraph, { GraphData, Options as VisGraphOptions } from "react-vis-graph-wrapper"
-import { Font, NodeOptions } from "vis-network";
+import { EdgeOptions, Font, NodeOptions } from "vis-network";
 import { GraphEvents } from "@/lib/graphs/vis-events";
 import { AdversarialSearchPosition } from "@/lib/adversarial/adversarialCase";
 import { AdversarialSearchAction } from "@/lib/adversarial/adversarialSolution";
@@ -11,6 +11,20 @@ import { buttonStyleClassNames } from "@/lib/statics/styleConstants";
 import { showConfirmation } from "@/app/components/dialogs/comfirm";
 
 import "./treeView.css";
+
+const COLOR_BAD_UTILITY = "#000000";
+const COLOR_POSITIVE_UTILITY = "#00ff00";
+const COLOR_NEGATIVE_UTILITY = "#ff0000";
+const COLOR_BEST_MOVE = new Map<number, string>([
+    [0, "#888888"],
+    [1, COLOR_POSITIVE_UTILITY],
+    [-1, COLOR_NEGATIVE_UTILITY]
+]);
+const COLOR_MOVE = new Map<number, string>([
+    [0, "#888888"],
+    [1, "#bbffbb"],
+    [-1, "#ffbbbb"]
+]);;
 
 function getVisOptions(graph: Graph | null = null): VisGraphOptions {
     let fontColor = "#7777ff";
@@ -38,11 +52,12 @@ function getVisOptions(graph: Graph | null = null): VisGraphOptions {
         interaction: {
             hover: true
         },
+        physics: false,
         layout: { 
             hierarchical: {
                 enabled: true,
                 levelSeparation: 120,
-                nodeSpacing: 30,
+                nodeSpacing: 50,
                 treeSpacing: 200,
                 blockShifting: true,
                 edgeMinimization: true,
@@ -64,7 +79,9 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
         c = colorLerp("#ff0000", "#00ff00", (pos.getScore() / 2 + 0.5));
     }
     let utility = pos.getUtility();
-    if (utility !== undefined) {
+    if (utility === undefined || isNaN(utility) || typeof utility !== "number" || utility < Number.MIN_SAFE_INTEGER || utility > Number.MAX_SAFE_INTEGER) {
+        bc = COLOR_BAD_UTILITY;
+    } else {
         bc = colorLerp("#ff0000", "#00ff00", (utility / 2 + 0.5));
     }
 
@@ -82,7 +99,7 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
     result.size = 12;
 
     //bc = node.data["highlighted"] ? "#ff0000" : bc;
-    result.borderWidth = node.data["highlighted"] ? 3 : 1;
+    result.borderWidth = node.data["highlighted"] ? 5 : 3;
     result.color = {border: bc, background: c, highlight: {border: bc}};
     result.font = {
         "color": (globals.nodes!.font! as Font).color!,
@@ -100,25 +117,25 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
 }
 
 function getEdgeAttributes(edge: GraphEdge): Record<string, any> {
-    let result : Record<string, any> = {};
-    let c = "#ffffff";
-    if (edge.getProp("highlighted")) {
-        c = "#ff0000";
-    }
+    let result : EdgeOptions = {};
     let action : AdversarialSearchAction = edge.data["action"];
     let sourcePos: AdversarialSearchPosition = edge.source.data["position"];
+    let player = sourcePos.getPlayer();
+    let c = COLOR_MOVE.get(player) ?? "#ffffff";
     let isBest = false;
     if (action && sourcePos) {
-        let actName = action["name"]
-        let sourcePosBestActions = sourcePos.bestMoves
+        let actName = action["name"];
+        let sourcePosBestActions = sourcePos.bestMoves;
         if (actName && (sourcePosBestActions?.length ?? 0) > 0) {
             isBest = (sourcePosBestActions?.findIndex(a => a.action.name === actName) ?? -1) >= 0;
         }
     }
     if (isBest) {
-        c = "#3333ff";
+        c = COLOR_BEST_MOVE.get(player) ?? c;
     }
     result.color = c;
+    result.width = 2;
+    result.hoverWidth = result.width + 2;
     result.label = edge.data["action"]["label"] ?? edge.data["action"]["name"] ?? "";
     return result;
 }
@@ -176,7 +193,7 @@ export default function TreeView({graph, onNodeSelected = (x) => {}, renderKey}:
             if (expandedNodes.has(node.id)) {
                 q.push(...[...graph.getAdjacentNodes(node)].map(n => ({node: n, distance: distance + 1})));
             } else if (!pos.isTerminal()) {
-                let children = node.data["childCount"] ?? countChildren(node);
+                let children = node.data["pathCount"] ?? countChildren(node);
                 label = `${label} (${children})`.trimStart();
             }
             data.nodes.push({id: node.id, label: label, level: distance, ...getNodeAttributes(node, visGraphOptions)});

@@ -1,6 +1,7 @@
 const OTHELLO = true; // replace this for the othello variant vs. classic reversi rules
 const startingPosition = OTHELLO ? "8/8/8/3WB3/3BW3/8/8/8 B" : "8/8/8/8/8/8/8/8 B";
 const initialPosition = startingPosition; // replace this if you want a position later in the game
+const absoluteWin = false // score is either 1 (for black wins), 0 (for draws), or -1 (for white wins), instead of linear
 // Other interesting positions:
 // advanced puzzle: "2BWWBBB/2BWWBB-/-BBBWBBB/BBBBBBBB/BBWBBWBB/BBBBBBWB/WBBWWWWW/-BBBB2B W"
 
@@ -73,7 +74,7 @@ const [BoardX, BoardY] = [250 - BoardW / 2, 500 - BoardH / 2];
                     if (text === "-") continue;
                     let centerX = x * CellSize + CellSize / 2 + BoardX;
                     let centerY = y * CellSize + CellSize / 2 + BoardY;
-                    let color = this.game.colors[text === "W" ? 0 : 1];
+                    let color = this.game.colors[text === "B" ? 0 : 1];
                     helper.drawCircle(centerX, centerY, CellSize / 2 - 10, color);
                     helper.drawCircle(centerX, centerY, CellSize / 2 - 15, pieceCenterShadeColor);
                 }
@@ -84,7 +85,7 @@ const [BoardX, BoardY] = [250 - BoardW / 2, 500 - BoardH / 2];
                 let centerY = BoardY / 2;
                 let scale = 2;
                 let r = (CellSize - 20) * scale / 2;
-                let color = this.game.colors[this.next === "W" ? 0 : 1];
+                let color = this.game.colors[this.next === "B" ? 0 : 1];
                 helper.drawCircle(centerX, centerY, r, color);
                 helper.drawCircle(centerX, centerY, r - 5 * scale, pieceCenterShadeColor);
             }
@@ -104,6 +105,10 @@ const [BoardX, BoardY] = [250 - BoardW / 2, 500 - BoardH / 2];
             return this.terminal;
         }
         getScore() {
+            if (absoluteWin) {
+                if (this.score > 0) return 1;
+                if (this.score < 0) return -1;
+            }
             return this.score;
         }
         getPlayer() {

@@ -7,7 +7,7 @@ import { Font, NodeOptions } from "vis-network";
 import * as vis from 'vis-network'
 import { colorWithAlpha } from "@/lib/utils/colors";
 import { buttonStyleClassNames, dangerButtonStyleClassNames, getButtonStyleClassNamesForColor } from "@/lib/statics/styleConstants";
-import { PropertyInspector } from "@/app/components/data/propertyEditor";
+import { PropertyInspector } from "@/app/components/editors/propertyEditor";
 import { ensureError } from "@/lib/errors/error";
 import { toast } from "react-toastify";
 import { showConfirmation } from "@/app/components/dialogs/comfirm";
@@ -259,18 +259,18 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
     }, [graph, graphChangedCallback])
 
     //console.log(visGraphData);
-    const [selectedComponents, setSelectedComponents] = useState([] as EditableGraphComponent[]);
+    const [selectedComponents, setSelectedComponents] = useState<EditableGraphComponent[]>([]);
     const visGraphEvents: GraphEvents = {
         select: (event) => {
             if (!graph) return;
-            var { nodes, edges } = event;
+            let { nodes, edges } = event;
             let selectedNodes = nodes.map((node: string | number) => graph.getNodeById(node as string)!);
             if (selectedNodes.length > 0) { setSelectedComponents(selectedNodes); return; }
             else {setSelectedComponents(edges.map((edge: string | number) => graph.getEdgeById(edge as number)!))};
         },
         doubleClick: (event) => {
             if (!graph) return;
-            var { nodes, edges, pointer } = event;
+            let { nodes, edges, pointer } = event;
             let selectedNodes: GraphNode[] = nodes.map((node: string | number) => graph.getNodeById(node as string)!);
             if (selectedNodes.length > 0) {
                 for (let node of selectedNodes) {

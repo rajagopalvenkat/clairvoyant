@@ -2,8 +2,8 @@
 
 import Header from "@/app/components/header";
 import GraphView from "./components/graphView";
-import SolutionEditor from "@/app/components/data/solutionEditor";
-import CaseEditor from "@/app/components/data/problemEditor";
+import SolutionEditor from "@/app/components/editors/solutionEditor";
+import CaseEditor from "@/app/components/editors/problemEditor";
 import { Graph, GridGraph } from "@/lib/graphs/graph";
 import { GraphSearchResult, GraphSearchSolution, buildGraphSearchSolution } from "@/lib/graphs/graphsolution"; // Import the missing class
 import { useCallback, useState } from "react";
@@ -20,9 +20,9 @@ export default function GraphSearchPage() {
     let [solHeight, setSolHeight] = useState(520);
     let [graphErrorMessage, setGraphErrorMessage] = useState("");
     let [algoErrorMessage, setAlgoErrorMessage] = useState("");
-    let [debugData, setDebugData] = useState(null as any);
+    let [debugData, setDebugData] = useState<any>(null);
     let [solutionData, setSolutionData] = useState("");
-    let [graphSteps, setGraphSteps] = useState([] as GraphSearchResult[]);
+    let [graphSteps, setGraphSteps] = useState<GraphSearchResult[]>([]);
     let [graphStepIndex, setGraphStepIndex] = useState(0);
     
     function updateSolutionSteps(solverData: string, graph: Graph | null) {

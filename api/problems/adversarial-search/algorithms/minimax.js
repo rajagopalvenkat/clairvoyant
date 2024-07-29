@@ -6,25 +6,16 @@
             super(game);
         }
     
-        // this function should use the generated expansions to generate an "optimal" play sequence
+        // this function should use the generated expansions to find out node utilities
         // expand() should not be called in this function
-        getPlaySequence(position) {
-            position.utility = this.dfsMinimax(position, 0, true);
+        // use yield this.algoStep() to provide a "step" to the visualizer
+        *runAlgorithm(position) {
+            yield* this.dfsMinimax(position, new Set());
             console.log(`Utility from node: ${position.utility}`);
-            let playSequence = [];
-            let current = position;
-            let moves = current.bestMoves[0];
-            while (moves && moves.length > 0) {
-                playSequence.push(moves[0]);
-                current = moves[0].position;
-                moves = current.bestMoves;
-            }
-            return playSequence;
         }
 
         // this function should prepare the position tree for the play algorithm
-        // call and yield the result of expand() to interactively let the user expand nodes
-        // depending on the user's expansion/time limit, expand() may yield empty expansions even if the node isn't terminal
+        // call and yield the result of this.expand() to interactively let the user expand nodes
         *runExpansion(node) {
             // iterative deepening approach
             // This avoids having massive queues in memory, which end up slowing down the algorithm
@@ -61,26 +52,45 @@
             return result;
         }
 
-        /** @param {Position} node */
-        dfsMinimax(node) {
+        /** 
+         * @param {Position} node
+         * @param {Set<string>} visited
+         */
+        *dfsMinimax(node, visited) {
             // This value is used to render the best move(s) from any given position
+            let nodeId = node.id;
+            if (visited.has(nodeId)) {
+                // case for infinite loops, assume a draw
+                if (node.utility < Number.MIN_SAFE_INTEGER || node.utility > Number.MAX_SAFE_INTEGER) {
+                    node.utility = 0;
+                    console.log(`Found node with forced draw by repetition: ${nodeId}`);
+                } else {
+                    //console.log(`Repeated: utility = ${node.utility}, ID = ${nodeId}`);
+                }
+                return;
+            }
+            visited.add(nodeId);
             node.bestMoves = [];
 
             if (node.isTerminal()) {
                 node.utility = node.getScore();
-                return node.utility;
+                yield this.algoStep();
+                return;
             }
+
             // expansion budget unavailable for this node
-            if (!node.moves || node.moves.length == 0) {
+            if (node.moves === undefined || node.moves.length == 0) {
                 // here, you can return a heuristic value for the node
                 // or you can just return 0 to assume a draw
                 node.utility = 0;
                 if (typeof node.getHeuristic === "function") {
                     node.utility = node.getHeuristic();
                 }
-                console.log(`Calculated heuristic utility of ${node.id} = ${node.utility}`);
-                return node.utility;
+                //console.log(`Calculated heuristic utility of ${node.id} = ${node.utility}`);
+                yield this.algoStep();
+                return;
             }
+
             let currentPlayer = node.getPlayer();
             let maximizingPlayer;
             if (currentPlayer === 1) {
@@ -94,7 +104,8 @@
             node.utility = maximizingPlayer ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
             let bestMoves = [];
             for (let move of node.moves) {
-                let score = this.dfsMinimax(move.position);
+                yield* this.dfsMinimax(move.position, visited);
+                let score = move.position.utility;
                 if (Math.abs(score - node.utility) < FLOAT_EPSILON) {
                     bestMoves.push(move);
                 } else if (maximizingPlayer ? score > node.utility : score < node.utility) {
@@ -103,8 +114,8 @@
                 }
             }
             node.bestMoves = bestMoves;
-            return node.utility;
-        }        
+            yield this.algoStep();
+        }
     }
 
     return new Minimax(game);

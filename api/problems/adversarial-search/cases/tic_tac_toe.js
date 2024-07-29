@@ -30,6 +30,7 @@
             let helper = this.drawHelper(ctx);
             // draw a centered 500px by 500px, 3 by 3 grid
             helper.drawGrid(0, 250, 500, 500, 3, 3, "#808080");
+            const w = 500 / 3;
             for (let i = 0; i < 3; i++) {
                 for (let j = 0; j < 3; j++) {
                     let x = j * w + w / 2;
