@@ -155,7 +155,7 @@ export default function GraphSearchPage() {
         }
         
         setAlgorithmPlaying(solver.algorithmBudget > 0);
-    }, [tickData, game, solver, expansionGenerator, algorithmGenerator, externalGraphData])
+    }, [game, solver, expansionGenerator, algorithmGenerator, externalGraphData])
 
     useEffect(() => {
         const intervalId = setInterval(doTick, TICK_INTERVAL_MS);
@@ -230,13 +230,13 @@ export default function GraphSearchPage() {
             alteredParams[k] = parameters[k]! + solver[k];
         }
         setRunningParameters(alteredParams);
-    }, [solver, game])
+    }, [solver, game, setRunningParameters])
 
     const onGamePropertyChange = useCallback((property: string, oldValue: any, newValue: any) => {
         game?.setProp(property, newValue);
         setGameProperties(game?.properties ?? []);
         setCanvasRenderKey(n => n + 1);
-    }, [game, solver]);
+    }, [game]);
     const onPositionPropertyChange = useCallback((property: string, oldValue: any, newValue: any) => {
         if (property === "__expand") {
             console.log(`Expanding ${shownPosition?.id}`);
@@ -245,7 +245,7 @@ export default function GraphSearchPage() {
             return;
         }
         shownPosition?.setProp(property, newValue);
-    }, [shownPosition]);
+    }, [shownPosition, solver]);
 
     const onCaseDataChanged = useCallback((rawData: string) => {
         setCaseData(rawData);
@@ -268,7 +268,7 @@ export default function GraphSearchPage() {
             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             shownPosition.render(ctx);
         }
-    }, [shownPosition, gameProperties]);
+    }, [shownPosition]);
 
     let extendedProperties = shownPosition ? shownPosition.properties : [];
     let positionNode = solver?.gameTree.getNodeById(shownPosition?.id ?? "");
@@ -323,7 +323,7 @@ export default function GraphSearchPage() {
                     { solver ? 
                         <div className="controls flex flex-col gap-2">
                             <div className="bg-primary-200 dark:bg-primary-800 rounded-2xl align-middle">
-                                <h3>Expansion ({solver.expansionBudget})</h3>
+                                <h3>Expansion</h3>
                                 <PlayControls playing={expansionPlaying} color={"primary"}
                                     play={() => setRunningParameters({"expansionBudget": Number.MAX_SAFE_INTEGER})}
                                     stop={() => setRunningParameters({"expansionBudget": 0})}
@@ -331,7 +331,7 @@ export default function GraphSearchPage() {
                                 />
                             </div>
                             <div className="bg-primary-200 dark:bg-primary-800 rounded-2xl">
-                                <h3>Algorithm ({solver.algorithmBudget})</h3>
+                                <h3>Algorithm</h3>
                                 <PlayControls playing={algorithmPlaying} color={"primary"}
                                     play={() => setRunningParameters({"algorithmBudget": Number.MAX_SAFE_INTEGER})}
                                     stop={() => setRunningParameters({"algorithmBudget": 0})}

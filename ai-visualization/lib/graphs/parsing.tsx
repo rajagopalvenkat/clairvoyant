@@ -223,7 +223,7 @@ export function notationFromGridGraph(graph: GridGraph): string {
                 nodeReprs.push(`?${GridGraph.idFromCoords(x, y)}`);
                 continue;
             }
-            nodeReprs.push(node.data["traversable"] === 0 ? "0" : "1")
+            nodeReprs.push(node.getProp("traversable") ? "1" : "0")
         }
         lines.push(nodeReprs.join(" "));
     }

@@ -1,3 +1,4 @@
+import { ensureError } from "../errors/error";
 import { Command, PropertyChangeCommand } from "../utils/commands";
 import { ItemPropertySet } from "../utils/properties";
 import { EditableGraphComponent, Graph, GraphNode } from "./graph";
@@ -92,6 +93,9 @@ export function buildGraphSearchSolution(code: string, graph: Graph) : GraphSear
     try {
         "use strict";
         let solverClass: any = eval?.(code);
+        if (solverClass === undefined) {
+            throw new Error("Received undefined on eval. Ensure the last line of your algorithm evaluates to the prototype of your solver class.");
+        }
         Object.setPrototypeOf(solverClass, GraphSearchSolution.prototype);
         let solver = Object.create(solverClass);
         let finalProto = Object.getPrototypeOf(solver);
@@ -111,7 +115,8 @@ export function buildGraphSearchSolution(code: string, graph: Graph) : GraphSear
         console.log("Checks succeeded!");
         result = new solver.constructor(graph);
     } catch (e) {
-        throw new Error("Error evaluating code: " + e);
+        let err = ensureError(e);
+        throw new Error("Error evaluating code: " + err.stack ?? err.message);
     }
     
     return result;

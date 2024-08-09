@@ -3,7 +3,7 @@ import { Graph, GraphEdge, GraphNode } from "@/lib/graphs/graph"
 import { colorLerp, colorWithAlpha } from "@/lib/utils/colors";
 import { useCallback, useEffect, useState } from "react"
 import VisGraph, { GraphData, Options as VisGraphOptions } from "react-vis-graph-wrapper"
-import { EdgeOptions, Font, NodeOptions } from "vis-network";
+import { Edge, EdgeOptions, Font, NodeOptions } from "vis-network";
 import { GraphEvents } from "@/lib/graphs/vis-events";
 import { AdversarialSearchPosition } from "@/lib/adversarial/adversarialCase";
 import { AdversarialSearchAction } from "@/lib/adversarial/adversarialSolution";
@@ -78,7 +78,13 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
     if (pos.isTerminal()) {
         c = colorLerp("#ff0000", "#00ff00", (pos.getScore() / 2 + 0.5));
     }
-    let utility = pos.getUtility();
+    let utility: number;
+    try {
+        utility = pos.getProp("utility");
+    } catch {
+        utility = pos.getUtility() ?? pos.utility ?? NaN;
+    }
+
     if (utility === undefined || isNaN(utility) || typeof utility !== "number" || utility < Number.MIN_SAFE_INTEGER || utility > Number.MAX_SAFE_INTEGER) {
         bc = COLOR_BAD_UTILITY;
     } else {
@@ -116,7 +122,7 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
     return result;
 }
 
-function getEdgeAttributes(edge: GraphEdge): Record<string, any> {
+function getEdgeAttributes(edge: GraphEdge): EdgeOptions {
     let result : EdgeOptions = {};
     let action : AdversarialSearchAction = edge.data["action"];
     let sourcePos: AdversarialSearchPosition = edge.source.data["position"];
@@ -137,6 +143,12 @@ function getEdgeAttributes(edge: GraphEdge): Record<string, any> {
     result.width = 2;
     result.hoverWidth = result.width + 2;
     result.label = edge.data["action"]["label"] ?? edge.data["action"]["name"] ?? "";
+    if (action.style) {
+        let styleOverrides = action.style as EdgeOptions;
+        for (let key of Object.keys(styleOverrides)) {
+            (result as any)[key] = styleOverrides[key as keyof EdgeOptions];
+        }
+    }
     return result;
 }
 
@@ -167,6 +179,7 @@ export default function TreeView({graph, onNodeSelected = (x) => {}, renderKey}:
         if (confirmation) {
             setExpandedNodes(new Set(allNodes.map(n => n.id)));
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [graph, renderKey])
     let requestCollapseAll = useCallback(async () => {
         let confirmation = await showConfirmation(`Are you sure you want to collapse all ${expandedNodes.size} expanded nodes? This action cannot be undone.`);
@@ -202,8 +215,8 @@ export default function TreeView({graph, onNodeSelected = (x) => {}, renderKey}:
             }
         }
         console.log(data);
+        console.log(graph);
         setGraphData(data);
-        console.log(visGraphOptions);
         setGraphOptions(visGraphOptions);
     }, [expandedNodes, graph, renderKey])
 

@@ -5,10 +5,11 @@ import { CanvasHelper } from "../utils/canvasHelper";
 
 export abstract class AdversarialSearchPosition implements EditableComponent {
     data: any;
-    style: NodeOptions | undefined;
-    moves: AdversarialSearchMove[] | undefined;
-    bestMoves: AdversarialSearchMove[] | undefined;
-    utility: number | undefined;
+    style?: NodeOptions;
+    moves?: AdversarialSearchMove[];
+    bestMoves?: AdversarialSearchMove[];
+    utility?: number;
+    getHeuristic?: () => number;
     constructor() {
         this.data = {};
         this.style = {};

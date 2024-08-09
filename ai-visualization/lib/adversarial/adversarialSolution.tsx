@@ -123,7 +123,7 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
         // update child counts, we'll use BFS to save on stack depth
         let visited = new Set([curNode.id]);
         this.gameTree.getIncomingNodes(curNode);
-        curNode.data["pathCount"] = (curNode.data["pathCount"] ?? 0) + addedPaths;
+        curNode.data["pathCount"] = (curNode.data["pathCount"] ?? 1) + addedPaths;
         let q = new Queue<GraphNode>();
         q.enqueue(curNode);
         while (!q.isEmpty()) {
@@ -134,7 +134,7 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
             for (let parent of parents) {
                 if (visited.has(parent.id)) continue;
                 visited.add(parent.id);
-                parent.data["pathCount"] = (parent.data["pathCount"] ?? 0) + addedPaths;
+                parent.data["pathCount"] = (parent.data["pathCount"] ?? 1) + addedPaths;
                 q.enqueue(parent);
             }
         }

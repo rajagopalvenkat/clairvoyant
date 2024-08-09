@@ -1,5 +1,8 @@
 const initialPosition = "B:W21,22,23,24,25,26,27,28,29,30,31,32:B1,2,3,4,5,6,7,8,9,10,11,12";
 
+// other positions:
+// late game: "B:WK13:BK12"
+
 (GameBase, PositionBase) => {
     class Position extends PositionBase {
         /** 
@@ -21,35 +24,39 @@ const initialPosition = "B:W21,22,23,24,25,26,27,28,29,30,31,32:B1,2,3,4,5,6,7,8
             white = white.substring(1); // ignore the "W" preceding the white positions
             black = black.substring(1); // ignore the "B" preceding the black positions
             this.notation = notation;
-            for (let w of white.split(",")) {
-                w = w.toUpperCase().trim();
-                let isKing = false;
-                if (w.startsWith("K")) {
-                    isKing = true;
-                    w = w.substring(1);
+            if (white.length > 0) {
+                for (let w of white.split(",")) {
+                    w = w.toUpperCase().trim();
+                    let isKing = false;
+                    if (w.startsWith("K")) {
+                        isKing = true;
+                        w = w.substring(1);
+                    }
+                    let num = parseInt(w);
+                    if (Number.isNaN(num)) throw new SyntaxError(`Unable to parse ${w} into a number while parsing white piece positions.`);
+                    this.squares[num - 1] = isKing ? "k" : "o";
                 }
-                let num = parseInt(w);
-                if (Number.isNaN(num)) throw new SyntaxError(`Unable to parse ${w} into a number while parsing white piece positions.`);
-                this.squares[num - 1] = isKing ? "k" : "o";
             }
-            for (let b of black.split(",")) {
-                b = b.toUpperCase().trim();
-                let isKing = false;
-                if (b.startsWith("K")) {
-                    isKing = true;
-                    b = b.substring(1);
+            if (black.length > 0) {
+                for (let b of black.split(",")) {
+                    b = b.toUpperCase().trim();
+                    let isKing = false;
+                    if (b.startsWith("K")) {
+                        isKing = true;
+                        b = b.substring(1);
+                    }
+                    let num = parseInt(b);
+                    if (Number.isNaN(num)) throw new SyntaxError(`Unable to parse ${b} into a number while parsing black piece positions.`);
+                    this.squares[num - 1] = isKing ? "K" : "O";
                 }
-                let num = parseInt(b);
-                if (Number.isNaN(num)) throw new SyntaxError(`Unable to parse ${b} into a number while parsing black piece positions.`);
-                this.squares[num - 1] = isKing ? "K" : "O";
-            }
-            let winner = this.getWinner();
-            if (winner === " ") {
-                this.score = 0;
-                this.terminal = this.isTie();
-            } else {
-                this.score = winner === "B" ? 1 : -1;
-                this.terminal = true;
+                let winner = this.getWinner();
+                if (winner === " ") {
+                    this.score = 0;
+                    this.terminal = this.isTie();
+                } else {
+                    this.score = winner === "B" ? 1 : -1;
+                    this.terminal = true;
+                }
             }
         }
     
@@ -66,6 +73,7 @@ const initialPosition = "B:W21,22,23,24,25,26,27,28,29,30,31,32:B1,2,3,4,5,6,7,8
         }
 
         getUtility() {
+            if (this.isTerminal()) return this.score;
             return this.getHeuristic();
         }
     

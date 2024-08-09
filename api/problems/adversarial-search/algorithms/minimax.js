@@ -8,40 +8,36 @@
     
         // this function should use the generated expansions to find out node utilities
         // expand() should not be called in this function
-        // use yield this.algoStep() to provide a "step" to the visualizer
-        *runAlgorithm(position) {
-            yield* this.dfsMinimax(position, new Set());
-            console.log(`Utility from node: ${position.utility}`);
+        // yield this.algoStep() to provide a "step" to the visualizer
+        *runAlgorithm(root) {
+            yield* this.dfsMinimax(root, new Set());
+            console.log(`Utility from node: ${root.utility}`);
         }
 
         // this function should prepare the position tree for the play algorithm
         // call and yield the result of this.expand() to interactively let the user expand nodes
-        *runExpansion(node) {
-            // iterative deepening approach
-            // This avoids having massive queues in memory, which end up slowing down the algorithm
-            // This is also a common approach in practice for memory reasons, though since visualizations require storing all positions, this isn't much of a benefit here.
-            let maxNodesFound = -1;
-            let maxDepthAllowed = 1;
-            let nodesFound = 0;
-            while (nodesFound > maxNodesFound) {
-                console.log(`Starting deepening expansion with depth ${maxDepthAllowed}, last nodes found ${nodesFound}.`)
-                maxNodesFound = nodesFound;
-                nodesFound = 0;
-                for (let expansion of this.dfs(node, 0, maxDepthAllowed)) {
-                    yield expansion;
-                    nodesFound++;
+        *runExpansion(root) {
+            // Breadth-first-search approach by levels
+            // Usually, expansion on these types of algorithms would use Iterative Deepening to conserve memory.
+            // Since, for visualization, we have to store all positions in memory; BFS is more efficient, to avoid re-expansions.
+            let nextLevelNodes = [root];
+            let visitedNodes = new Set([root]);
+            while (nextLevelNodes.length > 0) {
+                let newNodes = [];
+                for (let node of nextLevelNodes) {
+                    // using expand creates the "moves" field in the node. 
+                    // moves have an "action" field and a "position" field, 
+                    // the "position" field has a reference to the resulting position after that move is taken.
+                    yield this.expand(node);
+                    for (let move of node.moves) {
+                        let nextPos = move.position;
+                        // this ensures we only ever add a position to the queue once
+                        if (visitedNodes.has(nextPos.id)) continue;
+                        visitedNodes.add(nextPos.id);
+                        newNodes.push(nextPos);
+                    }
                 }
-                maxDepthAllowed++;
-            }
-        }
-
-        *dfs(node, depth, maxDepth) {
-            if (node.isTerminal() || depth === maxDepth) {
-                return;
-            }
-            yield this.expand(node);
-            for (let move of node.moves) {
-                yield* this.dfs(move.position, depth + 1, maxDepth);
+                nextLevelNodes = newNodes;
             }
         }
 
@@ -49,6 +45,7 @@
         expand(node) {
             let result = super.expand(node);
             // you can add additional data to the node here
+            node.data["accessiblePositions"] = node.moves.map(m => m.position.id);
             return result;
         }
 
@@ -63,7 +60,7 @@
                 // case for infinite loops, assume a draw
                 if (node.utility < Number.MIN_SAFE_INTEGER || node.utility > Number.MAX_SAFE_INTEGER) {
                     node.utility = 0;
-                    console.log(`Found node with forced draw by repetition: ${nodeId}`);
+                    console.log(`Found node with possible draw by repetition: ${nodeId}`);
                 } else {
                     //console.log(`Repeated: utility = ${node.utility}, ID = ${nodeId}`);
                 }
