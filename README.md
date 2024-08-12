@@ -17,8 +17,8 @@ You'll need to install some software before you can start using the AI visualize
 
 You might need to do this again when we have module/dependency changes.
 
-- `npm i` - This will install all required node dependencies (This should be run in the frontend folder `/ai-visualizer`)
-- `pip install Flask` - This will install the Flask python package using pip
+- In `/ai-visualizer`, run `npm i` - This will install all required node dependencies
+- In `/api`, run `pip install -r requirements.txt` - This will install the Flask python package using pip, along with any other required dependencies.
 
 ### Launching the AI Visualizer
 

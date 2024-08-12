@@ -1,0 +1,12 @@
+[Unit]
+Description=A service that runs the React Next server required to provide the front end elements of the Clairvoyant App
+After=network.target
+
+[Service]
+User=ender
+WorkingDirectory=/home/ender/clairvoyant/ai-visualization
+ExecStart=npm run start
+Restart=always
+
+[Install]
+WantedBy=multi-user.agent
