@@ -28,9 +28,10 @@ export default function CodeView(props: CodeViewProps) {
         if (containerRef.current) {
             containerRef.current.addEventListener("wheel", listener);
         }
+        let oldRef = containerRef.current;
         return () => {
-            if (containerRef.current) {
-                containerRef.current.removeEventListener("wheel", listener);
+            if (oldRef) {
+                oldRef.removeEventListener("wheel", listener);
             }
         }
     }, [containerRef, fontSize])
