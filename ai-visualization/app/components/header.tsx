@@ -19,12 +19,13 @@ export default function Header({selectedPage}: {selectedPage: string}) {
             {links.map(link => {
                 const selected: boolean = link.id === selectedPage;
                 return (
-                    <div key={link.id} className={`flex flex-col justify-center ${selected ? 'bg-gradient-to-b from-secondary-100 to-primary-100 dark:from-secondary-900 dark:to-primary-900' : ''}`}>
-                        <Link className={`m-3 ${selected 
+                        <Link key={link.id} href={link.url} className={`h-full flex flex-col justify-center ${selected 
                             ? 'text-secondary dark:text-secondary-200 underline font-bold' 
-                            : 'text-secondary dark:text-secondary-200'}`} 
-                        href={link.url}>{link.text}</Link>
-                    </div>
+                            : 'text-secondary dark:text-secondary-200'}`}>
+                            <div className={`p-3 flex flex-col justify-around h-full ${selected ? 'bg-gradient-to-b from-secondary-100 to-primary-100 dark:from-secondary-900 dark:to-primary-900' : ''}`}>
+                                {link.text}
+                            </div>
+                        </Link>
                 )
             })}
         </nav>

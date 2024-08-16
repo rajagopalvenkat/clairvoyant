@@ -1,27 +1,27 @@
-export interface ItemProperty {
+export interface ItemProperty<T = any> {
     name: string;
     type: string;
-    value: any;
+    value: T;
     fixed?: boolean;
     trigger?: boolean;
-    options?: any[];
+    options?: T[];
     hidden?: boolean;
     dynamic?: boolean;
     description?: string;
     display?: string;
-    check?: (value: any) => boolean;
+    check?: (value: T) => boolean;
 }
 
-export interface ItemPropertyChange<T> {
+export interface ItemPropertyChange<T, V = any> {
     property: string;
-    oldValue: any;
-    newValue: any;
+    oldValue: V;
+    newValue: V;
     target: T;
 }
 
-export interface ItemPropertySet<T> {
+export interface ItemPropertySet<T, V = any> {
     property: string;
-    value: any;
+    value: V;
     target: T;
 }
 

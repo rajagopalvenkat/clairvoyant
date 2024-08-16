@@ -66,7 +66,10 @@ export default function CaseEditor({problem, errorMessage, caseData, onCaseDataC
     <div className="flex-grow flex flex-col items-stretch">
         <div className="flex flex-row justify-between">
             <h2 className="inline-block">Case: </h2>
-            <button onClick={toggleTheme}>Theme: {currentTheme}</button>
+            {codeMode ?
+                <button onClick={toggleTheme}>Theme: {currentTheme}</button> :
+                <></>
+            }
         </div>
         <div className="flex flex-row mb-1">
             <Select unstyled className="flex-grow" classNames={{

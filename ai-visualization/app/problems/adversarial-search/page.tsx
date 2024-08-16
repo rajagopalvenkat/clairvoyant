@@ -38,7 +38,7 @@ interface ExternalGraphData {
 
 export default function GraphSearchPage() {
     let [leftWidth, setLeftWidth] = useState(480);
-    let [solHeight, setSolHeight] = useState(520);
+    let [solHeight, setSolHeight] = useState(300);
     let [caseErrorMessage, setCaseErrorMessage] = useState("");
     let [algoErrorMessage, setAlgoErrorMessage] = useState("");
     let [debugData, setDebugData] = useState<any>(null);

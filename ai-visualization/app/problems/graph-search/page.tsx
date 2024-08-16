@@ -17,7 +17,7 @@ export default function GraphSearchPage() {
     let [graph, setGraph] = useState(init_graph);
     let [graphData, setGraphData] = useState("");
     let [leftWidth, setLeftWidth] = useState(480);
-    let [solHeight, setSolHeight] = useState(520);
+    let [solHeight, setSolHeight] = useState(300);
     let [graphErrorMessage, setGraphErrorMessage] = useState("");
     let [algoErrorMessage, setAlgoErrorMessage] = useState("");
     let [debugData, setDebugData] = useState<any>(null);
