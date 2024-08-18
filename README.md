@@ -22,5 +22,5 @@ You might need to do this again when we have module/dependency changes.
 
 ### Launching the AI Visualizer
 
-- In the `ai-visualizer` subfolder, run `npm run dev`
-- In the `api` subfolder, run `py main.py` (The way you run python may vary slightly depending on your installation.)
+- In the `/ai-visualizer` subfolder, run `npm run dev`
+- In the `/api` subfolder, run `py main.py` (The way you run python may vary slightly depending on your installation.)
