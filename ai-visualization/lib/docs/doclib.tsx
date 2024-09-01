@@ -5,7 +5,8 @@ import { renderValue } from "../strings/pretty";
 export interface DocArg {
     name: string,
     type?: DocType,
-    default?: any
+    default?: any,
+    showDefault?: boolean
 }
 
 export interface DocType {
@@ -14,10 +15,10 @@ export interface DocType {
 
 // Internal doc type
 export class IDocType implements DocType {
-    type: string
-    page: string
+    type: string;
+    page: string;
     // referenced section
-    refs?: string
+    refs?: string;
     constructor(type: string = "any", page: string = "", refs: string = "") {
         this.type = type;
         this.page = page;
@@ -34,11 +35,11 @@ export class IDocType implements DocType {
 
 // External doc type
 export class EDocType implements DocType {
-    type: string
-    href: string
+    type: string;
+    href: string;
     constructor(type: string, href: string) {
-        this.type = type
-        this.href = href
+        this.type = type;
+        this.href = href;
     }
     render(): ReactNode {
         return (
@@ -48,9 +49,9 @@ export class EDocType implements DocType {
 }
 
 export class ArrayDocType implements DocType {
-    mainType: DocType
+    mainType: DocType;
     constructor(type: DocType) {
-        this.mainType = type
+        this.mainType = type;
     }
     render(): ReactNode {
         return (
@@ -62,7 +63,7 @@ export class ArrayDocType implements DocType {
 }
 
 export class UnionDocType implements DocType {
-    types: DocType[]
+    types: DocType[];
     constructor(types: DocType[]) {
         this.types = types;
     }
@@ -77,7 +78,7 @@ export class UnionDocType implements DocType {
 }
 
 export class TupleArrayDocType implements DocType {
-    types: DocType[]
+    types: DocType[];
     constructor(types: DocType[]) {
         this.types = types;
     }
@@ -91,11 +92,11 @@ export class TupleArrayDocType implements DocType {
     }
 }
 export class GenericDocType implements DocType {
-    mainType: DocType
-    argTypes: DocType[]
+    mainType: DocType;
+    argTypes: DocType[];
     constructor(type: DocType, args: DocType[]) {
-        this.mainType = type
-        this.argTypes = args
+        this.mainType = type;
+        this.argTypes = args;
     }
     render(): ReactNode {
         return (
@@ -106,6 +107,26 @@ export class GenericDocType implements DocType {
                     return (<>{a.render()}{separator}</>)
                 })
             }&gt;
+            </>
+        )
+    }
+}
+export class FunctionDocType implements DocType {
+    argTypes: DocType[]
+    retType: DocType
+    constructor(args: DocType[], retType: DocType) {
+        this.argTypes = args;
+        this.retType = retType;
+    }
+    render(): ReactNode {
+        return (
+            <>
+            ({
+                this.argTypes.map((a,i,arr) => {
+                    let separator = i === arr.length - 1 ? "" : ", ";
+                    return (<>{a.render()}{separator}</>)
+                })
+            }) =&gt; {this.retType.render()}
             </>
         )
     }
@@ -130,13 +151,32 @@ export const ConstDocGenerator = new EDocType("Generator", "https://developer.mo
 export const ConstDocMap = new EDocType("Map", "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map");
 export const ConstDocSet = new EDocType("Set", "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set");
 export const ConstDocRecord = new EDocType("Record", "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Record");
+export const ConstDocCanvasContext = new EDocType("CanvasRenderingContext2D", "https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D")
+
+export const VisDocNodeOptions = new EDocType("NodeOptions", "https://visjs.github.io/vis-network/docs/network/nodes.html");
+export const VisDocEdgeOptions = new EDocType("EdgeOptions", "https://visjs.github.io/vis-network/docs/network/edges.html")
 
 export function formatArgs(args: DocArg[]) {
     let result: ReactNode[] = []
     result = args.map((n,i,arr) => {
         let elemSeparator = i === arr.length - 1 ? "" : ", "
         return (
-            <span key={i}>{n.name} : {n.type?.render() ?? "any"}{n.default !== undefined ? renderValue(n.default, " = ", "", i + arr.length) : ""}{elemSeparator}</span>
+            <span key={i}>{n.name} : {n.type?.render() ?? "any"}{(n.default !== undefined || n.showDefault) ? renderValue(n.default, " = ", "", i + arr.length) : ""}{elemSeparator}</span>
+        )
+    })
+    return (
+        <span>
+            {result}
+        </span>
+    )
+}
+
+export function formatTypeList(types: DocType[]) {
+    let result: ReactNode[] = []
+    result = types.map((n,i,arr) => {
+        let elemSeparator = i === arr.length - 1 ? "" : ", "
+        return (
+            <span key={i}>{n.render()}{elemSeparator}</span>
         )
     })
     return (

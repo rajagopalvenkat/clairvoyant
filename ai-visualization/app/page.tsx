@@ -6,6 +6,7 @@ import { APP_NAME, PROBLEMS } from '@/lib/statics/appConstants';
 import Logo from './components/logo';
 import Header from './components/header';
 import { useRouter } from "next/router"
+import Link from 'next/link';
 
 export default function Home() {
   return (
@@ -38,6 +39,10 @@ export default function Home() {
                 </div>
               )
             })}
+          </div>
+          <div className="flex flex-col my-8 ml-4">
+            <h2 className="text-2xl font-semibold">Documentation</h2>
+            <p>If you are a programmer, you can make your own custom cases and algorithms to use here! Check out the <Link className="underline" href="/docs/">documentation</Link> page and look around if you ever need clarification.</p>
           </div>
           <div className="flex flex-col items-left my-8 ml-4">
             <h2 className="text-2xl font-semibold">Usage Guide</h2>

@@ -1,4 +1,5 @@
 import { NotImplementedError, ParsingError } from "../errors/error";
+import { mergeInPlace } from "../utils/objects";
 import { GenericGraph, Graph, GraphEdge, GraphEdgeSimple, GraphEdgeStyle, GraphNode, GraphNodeStyle, GridGraph, defaultDiagWeightNames } from "./graph";
 
 function removeQuotes(s: string): string {
@@ -55,7 +56,8 @@ function getNodesFromCoordArgs(graph: GridGraph, coordArgs: string[], phase: str
 const stmt_regex = /(?<cmd>[A-Z]+) +(?<args>( *("[^"]+"|\w+))+)(?<opts>( +-[\-a-zA-Z0-9]+)*)(?<data> *\{.+\})?/;
 const arg_regex = /"[^"]+"|\w+/g;
 function parseCommand(line: string, lineIdx: number): {cmd: string, args: string[], opts: string[], data: Object} | undefined {
-    if (line.trim() === "") return undefined;
+    line = line.trim();
+    if (line === "") return undefined;
     if (line.startsWith("#")) return undefined;
     const match = stmt_regex.exec(line);
     if (!match) throw invalidCommandSyntax(lineIdx);
@@ -70,10 +72,16 @@ function parseCommand(line: string, lineIdx: number): {cmd: string, args: string
     return {"cmd": cmd, "data": data, "args": args, "opts": opts};
 }
 
-export function genericFromGraphNotation(lines: string[]): GenericGraph {
+export function preprocessGraphNotation(text: string): string[] {
+    const result = text.trim().split(/(?:\s*\r?\n)+\s*/g).map(l => l.trim());
+    // console.log(result);
+    return result;
+}
+
+export function genericGraphFromNotation(lines: string[]): GenericGraph {
     let result = new GenericGraph();
     for (let i = 1; i < lines.length; i++) {
-        let line = lines[i]
+        let line = lines[i];
         let parsedCmd = parseCommand(line, i);
         if (parsedCmd === undefined) continue;
         let {cmd, args, opts, data} = parsedCmd;
@@ -83,7 +91,14 @@ export function genericFromGraphNotation(lines: string[]): GenericGraph {
                 ensureArgsLength(args, 1, "node setup", i, cmd);
                 let node = new GraphNode(result, args[0]);
                 [node.data, node.style] = splitDataAndStyle<GraphNodeStyle>(data);
-                result.addNode(node);
+                let existingNode = result.getNodeById(node.id);
+                if (existingNode === undefined) {
+                    result.addNode(node);
+                } else {
+                    // If it exists, merge data and style
+                    mergeInPlace(existingNode.data, node.data);
+                    mergeInPlace(existingNode.style, node.style);
+                }
                 break;
             case "EDGE":
                 ensureArgsLength(args, 2, "edge setup", i, cmd)
@@ -106,7 +121,7 @@ export function genericFromGraphNotation(lines: string[]): GenericGraph {
                 break;
         }
     }
-    console.log(result);
+    // console.log(result);
     return result;
 }
 
@@ -128,7 +143,10 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
         let line = lines[i].trim();
         let segments = line.split(/\s+/);
         let vals = segments.map(n => parseInt(n.trim()));
-        if (vals.length != x) throw new ParsingError(`Invalid grid row, expected ${x} numeric values, got ${vals.length}`, i, 0, "1 ".repeat(x).trimEnd());
+        for (let j in segments) {
+            if (isNaN(vals[j])) throw new ParsingError(`Invalid traversability value (NaN), received "${segments[j]}" (${line})`, i, 0, "1")
+        }
+        if (vals.length != x) throw new ParsingError(`Invalid grid row, expected ${x} numeric values, got ${vals.length} (${line})`, i, 0, "1 ".repeat(x).trimEnd());
         for (let j = 0; j < x; j++) {
             let node = result.ensureGetNodeByCoords(j, i - 1);
             let val = vals[j];
@@ -143,7 +161,7 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
             debugData[node.id] = node.data;
         }
     }
-    console.log(debugData);
+    // console.log(debugData);
 
     // Construction of edges
     // Now done in a separate function!

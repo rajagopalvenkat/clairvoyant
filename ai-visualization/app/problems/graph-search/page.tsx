@@ -68,7 +68,7 @@ export default function GraphSearchPage() {
     const onGraphDataChanged = useCallback((rawData: string) => {
         setGraphData(rawData);
         try {
-            setGraph(Graph.parseGraph(rawData));
+            setGraph(Graph.fromNotation(rawData));
             setGraphErrorMessage("");
         }
         catch (err) {
@@ -210,7 +210,7 @@ export default function GraphSearchPage() {
                 <VDivider onWidthChangeRequest={(v => {
                     setLeftWidth(leftWidth + v);
                 })}></VDivider>
-                <div className="p-3 m-2 rounded-md border-accent dark:border-accent-200 border-solid border flex-grow">
+                <div className="p-3 m-2 flex-grow">
                     <GraphView graph={graph} stepHandler={onStepRequested} onGraphChanged={handleGraphBackwardsData}
                     totalSteps={graphSteps.length} logData={debugData} stepIndex={graphStepIndex}></GraphView>
                 </div>

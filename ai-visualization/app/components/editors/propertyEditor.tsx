@@ -7,6 +7,10 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import CustomCheckbox from "../controls/customCheckbox";
 
+export const PropertySupportedTypes = [
+    "string", "number", "color", "boolean", "object"
+]
+
 export function PropertyInspector({properties, onChange}: {
     properties: ItemProperty[],
     onChange: (propertyName: string, oldValue: any, newValue: any) => void,

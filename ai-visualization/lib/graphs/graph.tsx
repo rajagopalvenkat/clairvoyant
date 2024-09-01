@@ -21,7 +21,7 @@ export const ADJACENT_DELTAS: [number, number][] = [
     [0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]
 ];
 
-import { genericFromGraphNotation, gridGraphFromNotation, notationFromGenericGraph, notationFromGridGraph } from "./parsing";
+import { genericGraphFromNotation, gridGraphFromNotation, notationFromGenericGraph, notationFromGridGraph, preprocessGraphNotation } from "./parsing";
 
 export interface GraphUIContext {
     heldNode?: GraphNode;
@@ -222,14 +222,20 @@ export abstract class Graph implements EditableComponent {
     }
 
     public getEdge(sourceNode: GraphNode, targetNode: GraphNode, includeUntraversable: boolean = false): GraphEdge | undefined {
+        let candidates = this.getEdges(sourceNode, targetNode, includeUntraversable);
+        let first = candidates.next();
+        if (first.done) return undefined;
+        return first.value;
+    }
+
+    public *getEdges(sourceNode: GraphNode, targetNode: GraphNode, includeUntraversable: boolean = false): Generator<GraphEdge> {
         this.ensureLookupClean();
         let edges = this._edgeLookup.get(sourceNode.id);
-        // console.log(edges);
-        if (!edges) return undefined;
+        if (!edges) return;
+        let result: GraphEdge[] = [];
         for (let edge of edges) {
-            if (edge.target.id === targetNode.id && (edge.traversable() || includeUntraversable)) return edge;
+            if (edge.target.id === targetNode.id && (edge.traversable() || includeUntraversable)) yield edge;
         }
-        return undefined;
     }
 
     public getEdgeById(id: number): GraphEdge | undefined {
@@ -300,15 +306,16 @@ export abstract class Graph implements EditableComponent {
     }
 
     // Graph notation functions
-    public static parseGraph(text: string): Graph {
-        const lines = text.split(/\r?\n/);
+    public static fromNotation(text: string): Graph {
+        const lines = preprocessGraphNotation(text);
         if (lines.length === 0) throw new ParsingError("The graph expression must have at least 1 line indicating the graph type.", 0, 0);
-        if (lines[0].startsWith("GENERIC")) {
-            return GenericGraph.fromGraphNotation(lines);
-        } else if (lines[0].startsWith("GRID")) {
-            return GridGraph.fromGraphNotation(lines);
+        const firstLine = lines[0];
+        if (firstLine.startsWith("GENERIC")) {
+            return GenericGraph.fromNotationPreprocessed(lines);
+        } else if (firstLine.startsWith("GRID")) {
+            return GridGraph.fromNotationPreprocessed(lines);
         } else {
-            throw new ParsingError(`Unable to find graph type ${lines[0]}, currently supported graph types are ${GRAPH_TYPE_NAMES.join(", ")}`, 0, 0);
+            throw new ParsingError(`Unable to find graph type "${firstLine}", currently supported graph types are ${GRAPH_TYPE_NAMES.join(", ")}`, 0, 0);
         }
     }
 
@@ -329,7 +336,10 @@ export class GridGraph extends Graph {
         this.diagonalWeights = diagonalWeights;
     }
 
-    static fromGraphNotation(lines: string[]): GridGraph {
+    static fromNotation(text: string): GridGraph {
+        return GridGraph.fromNotationPreprocessed(preprocessGraphNotation(text));
+    }
+    static fromNotationPreprocessed(lines: string[]): GridGraph {
         return gridGraphFromNotation(lines);
     }
 
@@ -445,8 +455,11 @@ export class GenericGraph extends Graph {
         super();
     }
 
-    static fromGraphNotation(lines: string[]): GenericGraph {
-        return genericFromGraphNotation(lines);
+    static fromNotation(text: string): GenericGraph {
+        return GenericGraph.fromNotationPreprocessed(preprocessGraphNotation(text));
+    }
+    static fromNotationPreprocessed(lines: string[]) {
+        return genericGraphFromNotation(lines);
     }
 
     stringify(): string {

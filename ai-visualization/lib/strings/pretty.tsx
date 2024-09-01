@@ -10,6 +10,7 @@ export function renderValue(value: any, prefix: string = "", suffix: string = ""
     //console.log("Value: ", value, "Str: ", str);
     if (value === undefined || value === null) {
         extraClasses.push("text-code-null");
+        str = value === undefined ? "undefined" : "null";
     }
     else if (typeof value === "boolean") {
         extraClasses.push("text-code-boolean");
@@ -20,20 +21,22 @@ export function renderValue(value: any, prefix: string = "", suffix: string = ""
     else if (typeof value === "string") {
         extraClasses.push("text-code-string");
         let lines = value.split("\n");
-        return (
-            <span>
-                {prefix}
-                <span className={extraClasses.join(" ")}>
-                    {lines.map((line, i) => {
-                        let separator = i === lines.length - 1 ? "" : "\n";
-                        return (
-                            <p key={i}>{line}{separator}</p>
-                        )
-                    })}
+        if (lines.length > 1) {
+            return (
+                <span>
+                    {prefix}
+                    <span className={extraClasses.join(" ")}>
+                        {lines.map((line, i) => {
+                            let separator = i === lines.length - 1 ? "" : "\n";
+                            return (
+                                <p key={i}>{line}{separator}</p>
+                            )
+                        })}
+                    </span>
+                    {suffix}
                 </span>
-                {suffix}
-            </span>
-        );
+            );
+        }
     }
 
     let result = (

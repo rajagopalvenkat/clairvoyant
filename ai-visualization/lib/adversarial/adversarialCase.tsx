@@ -1,5 +1,5 @@
 import { NodeOptions } from "vis-network";
-import { EditableComponent, ItemProperty } from "../utils/properties";
+import { canSetProps, EditableComponent, ItemProperty } from "../utils/properties";
 import { AdversarialSearchMove } from "./adversarialSolution";
 import { CanvasHelper } from "../utils/canvasHelper";
 
@@ -14,6 +14,7 @@ export abstract class AdversarialSearchPosition implements EditableComponent {
         this.data = {};
         this.style = {};
         this.moves = [];
+        this.bestMoves = [];
     }
     get id(): string {
         return this.getId();
@@ -40,6 +41,9 @@ export abstract class AdversarialSearchPosition implements EditableComponent {
         throw new Error("Property not found: " + name);
     }
     setProp(name: string, value: any): boolean {
+        let analysis = canSetProps(this.properties, {[name]: value});
+        if (!analysis.success) throw new Error(analysis.errors.join("\n"));
+
         return false;
     }
     drawHelper(ctx: CanvasRenderingContext2D) {

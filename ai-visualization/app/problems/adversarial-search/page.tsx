@@ -28,6 +28,9 @@ const TICK_LOGIC_TIMEOUT_MS = 20;
 // configured speed ~4000 iterations per second
 const GRAPH_UPDATE_INTERVAL_MS = 1500
 
+export const GAME_CANVAS_X = 500;
+export const GAME_CANVAS_Y = 1000;
+
 type ExpansionGenerator = Generator<AdversarialExpansion, void>;
 type AlgorithmGenerator = Generator<AdversarialAlgorithmStep>;
 
@@ -298,7 +301,7 @@ export default function GraphSearchPage() {
                 <VDivider onWidthChangeRequest={(v => {
                     setLeftWidth(leftWidth + v);
                 })}></VDivider>
-                <div className="relative overflow-hidden flex flex-row p-3 m-2 rounded-md border-accent dark:border-accent-200 border-solid border flex-grow">
+                <div className="relative overflow-hidden flex flex-row p-3 m-2 flex-grow">
                     <div className="tree-inspector max-h-[calc(100dvh-110px)]">
                         <TreeView renderKey={graphRenderKey} graph={solver?.gameTree ?? null} onNodeSelected={onNodeSelected}></TreeView>
                         { shownPosition !== null ? 
@@ -310,7 +313,7 @@ export default function GraphSearchPage() {
                     </div>
                     <div className="game-view w-1/2 max-h-[calc(100dvh-110px)] flex justify-center align-middle">
                         <div className="relative w-full h-full">
-                            <Canvas className="mx-auto max-h-full max-w-full" renderKey={canvasRenderKey} draw={positionRender} width={500} height={1000}></Canvas>
+                            <Canvas className="mx-auto max-h-full max-w-full" renderKey={canvasRenderKey} draw={positionRender} width={GAME_CANVAS_X} height={GAME_CANVAS_Y}></Canvas>
                             <div className="absolute left-0 top-0 h-full w-full" id="gameDiv"></div>
                         </div>
                     </div>

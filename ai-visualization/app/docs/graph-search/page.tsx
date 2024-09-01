@@ -9,6 +9,7 @@ import DocsRef from "@/app/components/docs/docsReference";
 import { DocsWarning } from "@/app/components/docs/docsSections";
 import Header from "@/app/components/header";
 import { ConstDocAny, ConstDocBoolean, ConstDocGenerator, ConstDocMap, ConstDocNumber, ConstDocRecord, ConstDocString, GenericDocType, IDocType, TupleArrayDocType, UnionDocType, docArrayOf, docMaybeUndefined } from "@/lib/docs/doclib";
+import { EditableComponentType } from "../page";
 
 const GraphNodeType = new IDocType("GraphNode", "", "GraphNode");
 const GraphEdgeType = new IDocType("GraphEdge", "", "GraphEdge");
@@ -32,11 +33,10 @@ export default function GraphSearchDocs() {
                         <li><a href="#GraphSearchSolution.solve">solve</a></li>
                     </ul>
                     <p>
-                        Furthermore, if you define multiple classes, the last of those classes will be considered
-                        to be the solution class.
+                        Your script should evaluate to the prototype of your defined class.
                     </p>
                 </div>
-                <DocsWarning>As of currently, your code is run as-is on your web client. <b>Long-running or infinite</b> loops will therefore crash your web client. Take appropriate actions to mitigate this issue when writing custom code. </DocsWarning>
+                <DocsWarning>At present, your code is run as-is on your web client. <b>Long-running or infinite</b> loops will therefore crash your web client. Take appropriate actions to mitigate this issue when writing custom code. </DocsWarning>
                 <DocsClass clazzName={"GraphSearchSolution"}>
                     <DocsFunction clazzName="GraphSearchSolution" functionName="constructor" hideReturnType args={[
                         {name: "graph", type: GraphType}
@@ -92,15 +92,15 @@ export default function GraphSearchDocs() {
                         <p>It allows you to alter any settable property of a component as part of the algorithm.</p>
                     </DocsFunction>
                 </DocsClass>
-                <DocsClass clazzName={"Graph"}>
-                    <DocsFunction clazzName="Graph" functionName="getAdjacentNodes" args={[
+                <DocsClass clazzName={"Graph"} implementz={[EditableComponentType]}>
+                    <DocsFunction clazzName="Graph" functionName="*getAdjacentNodes" args={[
                         {name: "node", type: GraphNodeType}
                     ]} returnType={new GenericDocType(ConstDocGenerator, [GraphNodeType])}>
                         <p>This allows you to iterate over all nodes which are accessible from one given node.</p>
                     
                         <p>Note: if multiple traversable edges connect the nodes, the generator will generate duplicate entries.</p>
                     </DocsFunction>
-                    <DocsFunction clazzName="Graph" functionName="getAdjacentEdges" args={[
+                    <DocsFunction clazzName="Graph" functionName="*getAdjacentEdges" args={[
                         {name: "node", type: GraphNodeType},
                         {name: "includeUntraversable", type: ConstDocBoolean, default: false}
                     ]} returnType={new GenericDocType(ConstDocGenerator, [GraphEdgeType])}>
@@ -110,14 +110,14 @@ export default function GraphSearchDocs() {
 
                         <p>If <code>includeUntraversable</code> is set to <code>true</code>, the result will include edges (including virtual edges) which cannot be traversed.</p>
                     </DocsFunction>
-                    <DocsFunction clazzName="Graph" functionName="getIncomingNodes" args={[
+                    <DocsFunction clazzName="Graph" functionName="*getIncomingNodes" args={[
                         {name: "node", type: GraphNodeType}
                     ]} returnType={new GenericDocType(ConstDocGenerator, [GraphNodeType])}>
                         <p>Functions just like <DocsRef refs="Graph.getAdjacentNodes">getAdjacentNodes</DocsRef>, but uses reversed edges.</p>
 
                         <p>In practice, this means one obtains the nodes that can directly reach the given node, as opposed to the reciprocal case.</p>
                     </DocsFunction>
-                    <DocsFunction clazzName="Graph" functionName="getIncomingEdges" args={[
+                    <DocsFunction clazzName="Graph" functionName="*getIncomingEdges" args={[
                         {name: "node", type: GraphNodeType},
                         {name: "includeUntraversable", type: ConstDocBoolean, default: false}
                     ]} returnType={new GenericDocType(ConstDocGenerator, [GraphEdgeType])}>
@@ -137,10 +137,18 @@ export default function GraphSearchDocs() {
                     </DocsFunction>
                     <DocsFunction clazzName="Graph" functionName="getEdge" args={[
                         {name: "source", type: GraphNodeType},
-                        {name: "target", type: GraphNodeType}
+                        {name: "target", type: GraphNodeType},
+                        {name: "includeUntraversable", type: ConstDocBoolean, default: false}
                     ]} returnType={docMaybeUndefined(GraphEdgeType)}>
-                        <p>This function will return the first edge found that goes from the source to the target, and which is traversable.</p>
+                        <p>This function will return the first edge found that goes from the source to the target, and which is traversable (unless includeUntraversable is true).</p>
                         <p>If no such edge exists, it will return undefined instead.</p>
+                    </DocsFunction>
+                    <DocsFunction clazzName="Graph" functionName="*getEdges" args={[
+                        {name: "source", type: GraphNodeType},
+                        {name: "target", type: GraphNodeType},
+                        {name: "includeUntraversable", type: ConstDocBoolean, default: false}
+                    ]} returnType={new GenericDocType(ConstDocGenerator, [GraphEdgeType])}>
+                        <p>This function will yield all edges that go from the source to the target, and which are traversable (unless includeUntraversable is true).</p>
                     </DocsFunction>
                     <DocsFunction clazzName="Graph" functionName="getAllNodes" args={[
                     ]} returnType={docArrayOf(GraphNodeType)}>
@@ -152,7 +160,7 @@ export default function GraphSearchDocs() {
                         <p>You can use the edge&apos;s <DocsRef refs="GraphEdge.isRef">isRef</DocsRef> property or its <DocsRef refs="GraphEdge.traversable">traversable()</DocsRef> function to check if it is a virtual edge or untraversable respectively.</p>
                     </DocsFunction>
                 </DocsClass>
-                <DocsClass clazzName={"GraphNode"}>
+                <DocsClass clazzName={"GraphNode"} implementz={[EditableComponentType]}>
                     <p>The Node is the most basic element in the graph, every node has an <DocsRef refs="GraphNode.id">id</DocsRef> which uniquely identifies it.</p>
                     <DocsProperty property={{name: "id", type: ConstDocString}}>
                         <p>The unique identifier of this node in the graph.</p>
@@ -176,7 +184,7 @@ export default function GraphSearchDocs() {
                         <DocsWarning>Modifying some of these values may result in the graph being broken. Modify with caution.</DocsWarning>
                     </DocsProperty>
                 </DocsClass>
-                <DocsClass clazzName={"GraphEdge"}>
+                <DocsClass clazzName={"GraphEdge"} implementz={[EditableComponentType]}>
                     <p>Edges are slightly complicated, but very powerful! Edges always have a mirrored version which we will call a virtual edge.</p>
                     <p>Edges connect pairs of nodes. For bidirectional edges, both the regular and virtual edges are traversable. For directed edges, only the regular edge is traversable, but a virtual edge still exists! This can help you identify the in-degree of a node for directed graphs.</p>
                     <p>Edges provide a series of helpful properties and functions that should allow you to use them effectively.</p>

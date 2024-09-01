@@ -14,7 +14,7 @@ export class CanvasHelper {
         this.ctx.moveTo(x1, y1);
         this.ctx.lineTo(x2, y2);
         if (color) this.ctx.strokeStyle = color;
-        if (thickness != undefined) this.ctx.lineWidth = thickness;
+        if (thickness !== undefined) this.ctx.lineWidth = thickness;
         this.ctx.stroke();
     }
     drawTextCentered(text: string, x: number, y: number, size: number, color: string | undefined = undefined, strokeColor: string | undefined = undefined, maxWidth: number | undefined = undefined, fontFamily: string = "Arial") {

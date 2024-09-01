@@ -1,19 +1,25 @@
 import Image from "next/image";
 import { ReactNode } from "react";
+import DocsElement from "./docsElement";
+import { DocType, formatTypeList } from "@/lib/docs/doclib";
 
-export function DocsInterface({clazzName, children} : {
+export function DocsInterface({clazzName, children = <></>, genericTypes = [], extendz = undefined} : {
     clazzName: string,
-    children: ReactNode
+    children?: ReactNode,
+    extendz?: DocType | undefined,
+    genericTypes?: DocType[]
 }) {
     return (
-        <div className="mt-4" id={clazzName}>
-            <h4 className="flex flex-row mt-4 items-center font-bold text-secondary-800 dark:text-secondary-200">
-                <div className="text-[#20d5a0] text-2xl mr-2 italic">I</div>
-                <div className="text-xl">{clazzName}</div>
-            </h4>
-            <div className="ml-4">
-                {children}
-            </div>
-        </div>
+        <DocsElement typeCharacter="I" typeColor="#20d5a0" typeTooltip="interface" elementName={clazzName} titleElements={
+            <>
+            {genericTypes.length == 0
+                ? <div>{clazzName}</div>
+                : <div>{clazzName}&lt;{formatTypeList(genericTypes)}&gt;</div>
+            }
+            {extendz ? <> <span className="text-primary-900 dark:text-primary-100"> extends </span> {extendz.render()} </> : <></>}
+            </>
+        }>
+            {children}
+        </DocsElement>
     )
 }

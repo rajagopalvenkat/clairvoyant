@@ -1,5 +1,5 @@
 import { AdversarialSearchCase, AdversarialSearchPosition, requiredGameMethods, requiredPositionMethods } from "./adversarialCase";
-import { EditableComponent, ItemProperty } from "../../lib/utils/properties";
+import { canSetProps, EditableComponent, ItemProperty } from "../../lib/utils/properties";
 import { GenericGraph, GraphEdgeSimple, GraphNode } from "../graphs/graph";
 import { ensureError } from "../errors/error";
 import { Queue } from "../collections/queue";
@@ -66,6 +66,9 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
         throw new Error("Property not found: " + name);
     }
     setProp(name: string, value: any): boolean {
+        let analysis = canSetProps(this.properties, {[name]: value});
+        if (!analysis.success) throw new Error(analysis.errors.join("\n"));
+
         return false;
     }
 
