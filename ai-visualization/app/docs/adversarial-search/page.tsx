@@ -8,9 +8,9 @@ import DocsProperty from "@/app/components/docs/docsProperty";
 import DocsRef from "@/app/components/docs/docsReference";
 import { DocsInfo, DocsWarning } from "@/app/components/docs/docsSections";
 import Header from "@/app/components/header";
-import { GAME_CANVAS_X, GAME_CANVAS_Y } from "@/app/problems/adversarial-search/page";
 import { ConstDocAny, ConstDocBoolean, ConstDocCanvasContext, ConstDocGenerator, ConstDocMap, ConstDocNumber, ConstDocRecord, ConstDocString, GenericDocType, IDocType, TupleArrayDocType, UnionDocType, VisDocNodeOptions, docArrayOf, docMaybeUndefined } from "@/lib/docs/doclib";
-import { CanvasHelperType, EditableComponentType } from "../page";
+import { CanvasHelperType, EditableComponentType } from "../docTypes";
+import { GAME_CANVAS_X, GAME_CANVAS_Y } from "@/lib/statics/styleConstants";
 
 const AdversarialSolverType = new IDocType("AdversarialSolver", "", "AdversarialSolver")
 const AdversarialGameType = new IDocType("AdversarialGame", "", "AdversarialGame");

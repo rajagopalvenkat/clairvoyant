@@ -19,6 +19,7 @@ import "./adversarial-search.css";
 import { ItemProperty } from "@/lib/utils/properties";
 import DynamicLabel from "@/app/components/text/dynamicLabel";
 import PlayControls from "@/app/components/controls/playControls";
+import { GAME_CANVAS_X, GAME_CANVAS_Y } from "@/lib/statics/styleConstants";
 
 const defaultDraw = (ctx: CanvasRenderingContext2D) => {}
 const MAX_EXPANSION_STEP_SIZE = 100;
@@ -27,9 +28,6 @@ const TICK_INTERVAL_MS = 25; // 40 times per second
 const TICK_LOGIC_TIMEOUT_MS = 20;
 // configured speed ~4000 iterations per second
 const GRAPH_UPDATE_INTERVAL_MS = 1500
-
-export const GAME_CANVAS_X = 500;
-export const GAME_CANVAS_Y = 1000;
 
 type ExpansionGenerator = Generator<AdversarialExpansion, void>;
 type AlgorithmGenerator = Generator<AdversarialAlgorithmStep>;

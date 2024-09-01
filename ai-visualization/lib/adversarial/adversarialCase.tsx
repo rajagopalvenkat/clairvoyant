@@ -77,6 +77,9 @@ export abstract class AdversarialSearchCase implements EditableComponent {
         throw new Error("Property not found: " + name);
     }
     setProp(name: string, value: any): boolean {
+        let analysis = canSetProps(this.properties, {[name]: value});
+        if (!analysis.success) throw new Error(analysis.errors.join("\n"));
+
         return false;
     }
     abstract getInitialPosition(): AdversarialSearchPosition;

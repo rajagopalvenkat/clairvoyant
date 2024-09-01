@@ -11,12 +11,9 @@ import { DocsFunction } from "../components/docs/docsFunction";
 import { PropertySupportedTypes } from "../components/editors/propertyEditor";
 import { DocsWarning } from "../components/docs/docsSections";
 import { DocsClass } from "../components/docs/docsClass";
+import { EditableComponentType, PropertyType } from "./docTypes";
 
-export const EditableComponentType = new IDocType("EditableComponent", "/docs", "EditableComponent");
-export const PropertyType = new IDocType("ItemProperty", "/docs", "ItemProperty");
 const TypeVarT = new IDocType("T", "", "");
-
-export const CanvasHelperType = new IDocType("CanvasHelper", "/docs", "CanvasHelper");
 
 export default function DocsIndex() {
     return (

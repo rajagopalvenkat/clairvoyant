@@ -9,7 +9,7 @@ import DocsRef from "@/app/components/docs/docsReference";
 import { DocsWarning } from "@/app/components/docs/docsSections";
 import Header from "@/app/components/header";
 import { ConstDocAny, ConstDocBoolean, ConstDocGenerator, ConstDocMap, ConstDocNumber, ConstDocRecord, ConstDocString, GenericDocType, IDocType, TupleArrayDocType, UnionDocType, docArrayOf, docMaybeUndefined } from "@/lib/docs/doclib";
-import { EditableComponentType } from "../page";
+import { EditableComponentType } from "../docTypes";
 
 const GraphNodeType = new IDocType("GraphNode", "", "GraphNode");
 const GraphEdgeType = new IDocType("GraphEdge", "", "GraphEdge");

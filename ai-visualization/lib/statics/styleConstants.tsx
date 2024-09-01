@@ -47,3 +47,6 @@ export const highlights: Record<string, HighlightStyle> = {
         {tag: tags.definition(tags.propertyName), color: "#fd8"}
     ], {themeType: "dark"})
 }
+
+export const GAME_CANVAS_X = 500;
+export const GAME_CANVAS_Y = 1000;
