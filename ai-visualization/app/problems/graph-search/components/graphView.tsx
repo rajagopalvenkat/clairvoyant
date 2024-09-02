@@ -114,6 +114,9 @@ function getNodeAttributes(node: GraphNode, globals: VisGraphOptions): NodeOptio
     } else if (hovered) {
         borderColor = "#0000ff";
     }
+    if (node.graph instanceof GridGraph) {
+        result.fixed = true;
+    }
     result.color = {border: borderColor, background: c, highlight: {border: borderColor}};
     result.font = {
         "color": colorWithAlpha((globals.nodes!.font! as Font).color!, traversabilityAlpha),
@@ -157,10 +160,11 @@ function getEdgeAttributes(edge: GraphEdge): Record<string, any> {
     return result;
 }
 
-export function GraphComponentInspector({components, onChanges, onDeletionRequested}: {
+export function GraphComponentInspector({components, onChanges, onDeletionRequested, showDelete = true}: {
     components: EditableGraphComponent[], 
     onChanges: (property: string, oldValue: any, newValue: any) => void,
     onDeletionRequested: () => void,
+    showDelete?: boolean
 }) {
     if (components.length === 0) {
         return <></>
@@ -180,9 +184,12 @@ export function GraphComponentInspector({components, onChanges, onDeletionReques
             <h2 className="text-xl">{name}</h2>
         </div>
         <PropertyInspector properties={components[0].properties} onChange={onChanges} />
-        <div className="flex flex-row justify-end my-1">
-            <button className={`${dangerButtonStyleClassNames} px-1`} onClick={onDeletionRequested}>Delete</button>
-        </div>
+        { showDelete ?
+            (<div className="flex flex-row justify-end my-1">
+                <button className={`${dangerButtonStyleClassNames} px-1`} onClick={onDeletionRequested}>Delete</button>
+            </div>) :
+            <></>
+        }
     </>
 }
 
@@ -212,7 +219,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                 nodes: graph.getAllNodes().map((node, _idx) => {
                     return {id: node.id, label: node.getProp("label"), ...getNodeAttributes(node, visGraphOptions)}
                 }),
-                edges: graph.getAllEdges().map((edge, index) => {
+                edges: graph.getAllEdges().map((edge, _idx) => {
                     let [source, target] = edge.data["flipped"] ? [edge.target.id, edge.source.id] : [edge.source.id, edge.target.id];
                     return {id: edge.id, from: source, to: target, arrows: (edge.isBidirectional ? '' : 'to'), ...getEdgeAttributes(edge)}
                 })
@@ -296,6 +303,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
         },
         hold: (event) => {
             if (!graph) return;
+            if (graph instanceof GridGraph) return; // no edge creation in grid graphs
             //toast.info("Hold event triggered for node " + event.nodes[0] + " and edge " + event.edges[0]);
             if (event.nodes.length > 0) { graph.context.heldNode = graph.getNodeById(event.nodes[0] as string)}
             else if (event.edges.length > 0) { graph.context.heldEdge = graph.getEdgeById(event.edges[0] as number)}
@@ -323,12 +331,14 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
         },
         dragStart: (event) => {
             if (!graph) return;
+            if (graph instanceof GridGraph) return; // No edge creation for grid graphs
             graph.context.draggingNode = event.nodes.length === 0 ? undefined : graph.getNodeById(event.nodes[0] as string);
             graphChangedCallback(graph);
         },
         release: (event) => {
             if (!graph) return;
-            if (graph.context.heldNode && graph.context.hoveredNode) {
+            // No edge creation for grid graphs
+            if (!(graph instanceof GridGraph) && graph.context.heldNode && graph.context.hoveredNode) {
                 let edge = new GraphEdgeSimple(graph.getNextEdgeIdentifier(), graph.context.heldNode, graph.context.hoveredNode, graph.getProp("default_bidirectional"));
                 graph.addEdge(edge);
             }
@@ -370,7 +380,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                 </div>
             </div>
             <div className={`edit-menu bg-secondary-100 dark:bg-secondary-900 rounded-xl px-2 py-1 ${hideIfNothingSelected}`}>
-                <GraphComponentInspector components={selectedComponents} onChanges={(property: string, oldValue: any, newValue: any) => {
+                <GraphComponentInspector components={selectedComponents} showDelete={!(graph instanceof GridGraph)} onChanges={(property: string, oldValue: any, newValue: any) => {
                     // Will have to be edited to support undo/redo
                     console.log("Changing property", property, "from", oldValue, "to", newValue)
                     for (let component of selectedComponents) {

@@ -775,7 +775,7 @@ export class GraphNode implements EditableGraphComponent {
             if (!this.traversable) innerData.traversable = false;
         }
         for (let key of ["label", "h"]) {
-            if (this.data[key] != undefined) {
+            if (this.data[key] !== undefined) {
                 innerData[key] = this.data[key];
             }
         }

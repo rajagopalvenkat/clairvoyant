@@ -12,7 +12,7 @@ import { ConstDocAny, ConstDocBoolean, ConstDocCanvasContext, ConstDocGenerator,
 import { CanvasHelperType, EditableComponentType } from "../docTypes";
 import { GAME_CANVAS_X, GAME_CANVAS_Y } from "@/lib/statics/styleConstants";
 
-const AdversarialSolverType = new IDocType("AdversarialSolver", "", "AdversarialSolver")
+const AdversarialSolverType = new IDocType("AdversarialSolver", "", "AdversarialSolver");
 const AdversarialGameType = new IDocType("AdversarialGame", "", "AdversarialGame");
 const AdversarialPositionType = new IDocType("AdversarialPosition", "", "AdversarialPosition");
 const AdversarialActionType = new IDocType("Action", "", "Action");

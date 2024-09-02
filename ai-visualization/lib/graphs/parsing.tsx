@@ -209,11 +209,19 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
                 result.updateAllTraversableEdges();
                 break;
             case "EDGE":
-                ensureArgsLength(args, 4, "edge setup", i, cmd)
+                ensureArgsLength(args, 4, "edge setup", i, cmd);
                 let [nodeA, nodeB] = getNodesFromCoordArgs(result, args, "edge setup", i, cmd, 2);
                 let edge = result.getEdge(nodeA, nodeB);
                 if (!edge) throw new ParsingError(`No edge exists between the two given nodes (${nodeA.id} and ${nodeB.id})`, i, -1);
-                [edge.data, edge.style] = splitDataAndStyle<GraphEdgeStyle>(data);
+                let [newData, newStyle] = splitDataAndStyle<GraphEdgeStyle>(data);
+                for (let k of Object.keys(newData)) {
+                    edge.data[k] = (newData as any)[k];
+                }
+                for (let k of Object.keys(newStyle)) {
+                    edge.style[k as keyof GraphEdgeStyle] = (newStyle as any)[k];
+                }
+                let bidirectionality = opts.includes("-b") || opts.includes("--bidirectional");
+                edge.isBidirectional = bidirectionality;
                 break;
             case "START":
                 ensureArgsLength(args, 2, "start node indication", i, cmd);
@@ -250,6 +258,34 @@ export function notationFromGridGraph(graph: GridGraph): string {
         lines.push(`START ${graph.startNode.x} ${graph.startNode.y}`);
     if (graph.endNode)
         lines.push(`GOAL ${graph.endNode.x} ${graph.endNode.y}`);
+
+    for (let node of graph.getAllNodes()) {
+        let data = node.getSerializableData();
+        if (Object.keys(data).length == 0) continue;
+        lines.push(`NODE ${node.x} ${node.y} ${JSON.stringify(data)}`);
+    }
+    for (let edge of graph.getAllEdges()) {
+        let data = getSerializableEdgeData(edge);
+        let [dx,dy] = [Math.abs(edge.source.x - edge.target.x), Math.abs(edge.source.y - edge.target.y)];
+        let isOrthoAdjacent = dx + dy <= 1;
+        let isDiagAdjacent = dx == 1 && dy == 1;
+        let expectedWeight = isDiagAdjacent ? graph.diagonalWeights : 1;
+        if (edge.weight !== expectedWeight) {
+            data["w"] = edge.weight;
+        } else {
+            delete data["w"];
+        }
+        // Default data
+        if ((isOrthoAdjacent || isDiagAdjacent) && Object.keys(data).length == 0 && edge.isBidirectional) continue;
+        let opts = [];
+        if (edge.isBidirectional) {
+            opts.push("-b");
+        }
+
+        let dataStr = JSON.stringify(data);
+        if (dataStr === "{}") dataStr = "";
+        lines.push(`EDGE ${edge.source.x} ${edge.source.y} ${edge.target.x} ${edge.target.y} ${opts.join(" ")} ${dataStr}`.trimEnd());
+    }
     return lines.join("\n");
 }
 
@@ -266,14 +302,14 @@ function getSafeId(id: string): string {
     return id;
 }
 
-function getEdgeSerializableData(edge: GraphEdge): Record<string, any> {
+function getSerializableEdgeData(edge: GraphEdge): Record<string, any> {
     let innerData: Record<string, any> = {};
     if (edge.style && Object.keys(edge.style).length > 0)
         innerData.style = edge.style;
     let serializedKeyValues: [string, any][] = [["flipped", false], ["w", 1], ["label", undefined], ["forbidden", false]];
     for (let [key, defaultVal] of serializedKeyValues) {
         if (edge.data[key] && edge.data[key] != defaultVal) innerData[key] = edge.data[key];
-    }    
+    }
     return innerData;
 }
 
@@ -292,7 +328,7 @@ export function notationFromGenericGraph(graph: GenericGraph): string {
             opts.push("-b");
         }
 
-        let dataStr = JSON.stringify(getEdgeSerializableData(edge));
+        let dataStr = JSON.stringify(getSerializableEdgeData(edge));
         if (dataStr === "{}") dataStr = "";
         lines.push(`EDGE ${getSafeId(edge.source.id)} ${getSafeId(edge.target.id)} ${opts.join(" ")} ${dataStr}`.trimEnd());
     }
