@@ -323,7 +323,7 @@ export default function GraphSearchPage() {
                     
                     { solver ? 
                         <div className="controls flex flex-col gap-2">
-                            <div className="bg-primary-200 dark:bg-primary-800 rounded-2xl align-middle">
+                            <div className="bg-primary-200 dark:bg-primary-800 rounded-2xl align-middle px-2 pt-1">
                                 <h3>Expansion</h3>
                                 <PlayControls playing={expansionPlaying} color={"primary"}
                                     play={() => setRunningParameters({"expansionBudget": Number.MAX_SAFE_INTEGER})}
@@ -331,8 +331,8 @@ export default function GraphSearchPage() {
                                     step={() => modifyRunningParameters({"expansionBudget": 1})}
                                 />
                             </div>
-                            <div className="bg-primary-200 dark:bg-primary-800 rounded-2xl">
-                                <h3>Algorithm</h3>
+                            <div className="bg-primary-200 dark:bg-primary-800 rounded-2xl align-middle px-2 pt-1">
+                                <h3>Evaluation</h3>
                                 <PlayControls playing={algorithmPlaying} color={"primary"}
                                     play={() => setRunningParameters({"algorithmBudget": Number.MAX_SAFE_INTEGER})}
                                     stop={() => setRunningParameters({"algorithmBudget": 0})}
