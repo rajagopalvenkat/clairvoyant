@@ -109,6 +109,11 @@ export abstract class AdversarialSearchSolution implements EditableComponent {
 
         // this can double-count leaf nodes if they're reached via different paths (consider this transpositions)
         let addedPaths = moves.length - 1;
+        // for terminal nodes, we consider no added paths:
+        if (position.isTerminal()) {
+            addedPaths = 0;
+        }
+
         for (let s of moves) {
             // In case of converging lines, we need to check if the node already exists
             let nextNode = this.gameTree.getNodeById(s.position.id);
