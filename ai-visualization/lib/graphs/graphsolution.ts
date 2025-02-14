@@ -1,36 +1,28 @@
 import { ensureError } from "../errors/error";
 import { Command, PropertyChangeCommand } from "../utils/commands";
 import { ItemPropertySet } from "../utils/properties";
-import { EditableGraphComponent, Graph, GraphNode } from "./graph";
-
-const GSR_SUCCESS = "success";
-const GSR_FAILURE = "failure";
-const GSR_VISIT = "visit";
-const GSR_EXPAND = "expand";
-const GSR_NONE = "none";
+import { GraphNode } from "./components";
+import { EditableGraphComponent, Graph, GraphContext } from "./graph";
+import { GraphFailureCommand, GraphSuccessCommand, LayerGraphCommand } from "./graphcommands";
+import { RawGraph } from "./parsing";
 
 export class GraphSearchResult {
-    actType: string;
-    cell: GraphNode | null;
     debugValue: any;
-    command?: Command<Graph>;
-    constructor(actType: string, cell: GraphNode | null = null, debugValue: any = null, command?: Command<Graph>) {
-        this.actType = actType;
-        this.cell = cell;
+    command?: Command<GraphContext>;
+    isTerminal: boolean;
+
+    constructor(debugValue: any = null, command?: Command<GraphContext>, isTerminal = false) {
         this.debugValue = debugValue;
         this.command = command;
-    }
-
-    isTerminal(): boolean {
-        return this.actType === GSR_SUCCESS || this.actType === GSR_FAILURE;
+        this.isTerminal = isTerminal;
     }
 }
 
 export class GraphSearchSolution {
     private __steps: GraphSearchResult[] = [];
     private __propertyStore: Map<EditableGraphComponent, Record<string, any>> = new Map();
-    constructor(graph: Graph | null = null) {
-    }
+
+    constructor(graph: Graph | null = null) { }
 
     solve(start: GraphNode, end: GraphNode): boolean {
         return this.failure();
@@ -43,7 +35,7 @@ export class GraphSearchSolution {
             throw new Error("No steps were recorded. Did you invoke failure or success?");
         }
         let lastStep = this.__steps[this.__steps.length - 1];
-        if (!lastStep.isTerminal()) {
+        if (!lastStep.isTerminal) {
             throw new Error("Last step is not a terminal step. Ensure you finish solving by returning a success or failure.");
         }
         console.log("Solution steps: ", this.__steps);
@@ -51,18 +43,18 @@ export class GraphSearchSolution {
     }
 
     failure(debugValue: any = null): boolean {
-        this.__steps.push(new GraphSearchResult(GSR_FAILURE, null, debugValue));
+        this.__steps.push(new GraphSearchResult(debugValue, new GraphFailureCommand(), true));
         return false;
     }
     success(debugValue: any = null): boolean {
-        this.__steps.push(new GraphSearchResult(GSR_SUCCESS, null, debugValue));
+        this.__steps.push(new GraphSearchResult(debugValue, new GraphSuccessCommand(), true));
         return true;
     }
     visit(cell: GraphNode, debugValue: any = null): void {
-        this.__steps.push(new GraphSearchResult(GSR_VISIT, cell, debugValue));
+        this.alter([{target: cell, property: "state", value: "visited"}], debugValue);
     }
     expand(cell: GraphNode, debugValue: any = null): void {
-        this.__steps.push(new GraphSearchResult(GSR_EXPAND, cell, debugValue));
+        this.alter([{target: cell, property: "state", value: "expanded"}], debugValue);
     }
     highlight(components: EditableGraphComponent[], debugValue: any = null): void {
         this.alter(components.map(c => {return {target: c, property: "highlighted", value: true}}), debugValue);
@@ -81,10 +73,22 @@ export class GraphSearchSolution {
             store[change.property] = change.value;
             this.__propertyStore.set(change.target, store);
         }
-        this.__steps.push(new GraphSearchResult(GSR_NONE, null, debugValue, new PropertyChangeCommand(contextfulChanges)));
+        this.__steps.push(new GraphSearchResult(debugValue, new PropertyChangeCommand(contextfulChanges)));
     }
-    log(debugValue: any) {
-        this.__steps.push(new GraphSearchResult(GSR_NONE, null, debugValue));
+    log(debugValue: any): void {
+        this.__steps.push(new GraphSearchResult(debugValue));
+    }
+
+    create(rawGraph: string | RawGraph, debugValue: any): Graph {
+        let graphResult;
+        if (typeof(rawGraph) === "string") {
+            graphResult = Graph.fromNotation(rawGraph);
+        } else {
+            graphResult = Graph.fromRaw(rawGraph);
+        }
+        
+        this.__steps.push(new GraphSearchResult(debugValue, new LayerGraphCommand(graphResult)));
+        return graphResult;
     }
 }
 
@@ -116,7 +120,7 @@ export function buildGraphSearchSolution(code: string, graph: Graph) : GraphSear
         result = new solver.constructor(graph);
     } catch (e) {
         let err = ensureError(e);
-        throw new Error("Error evaluating code: " + err.stack ?? err.message);
+        throw new Error("Error evaluating code: " + (err.stack ?? err.message));
     }
     
     return result;

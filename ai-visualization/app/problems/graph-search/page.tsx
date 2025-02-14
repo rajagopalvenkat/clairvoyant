@@ -4,17 +4,17 @@ import Header from "@/app/components/header";
 import GraphView from "./components/graphView";
 import SolutionEditor from "@/app/components/editors/solutionEditor";
 import CaseEditor from "@/app/components/editors/problemEditor";
-import { Graph, GridGraph } from "@/lib/graphs/graph";
+import { Graph, GraphContext, GridGraph } from "@/lib/graphs/graph";
 import { GraphSearchResult, GraphSearchSolution, buildGraphSearchSolution } from "@/lib/graphs/graphsolution"; // Import the missing class
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ensureError } from "@/lib/errors/error";
 import { HDivider, VDivider } from "@/app/components/divider";
 import { toast } from "react-toastify";
 
-const init_graph : Graph | null = null;
+const INIT_CONTEXT = new GraphContext(null);
 
 export default function GraphSearchPage() {
-    let [graph, setGraph] = useState(init_graph);
+    let [ctx, setCtx] = useState(INIT_CONTEXT);
     let [graphData, setGraphData] = useState("");
     let [leftWidth, setLeftWidth] = useState(480);
     let [solHeight, setSolHeight] = useState(300);
@@ -25,7 +25,8 @@ export default function GraphSearchPage() {
     let [graphSteps, setGraphSteps] = useState<GraphSearchResult[]>([]);
     let [graphStepIndex, setGraphStepIndex] = useState(0);
     
-    function updateSolutionSteps(solverData: string, graph: Graph | null) {
+    function updateSolutionSteps(solverData: string, graphContext: GraphContext) {
+        const graph = graphContext.graph;
         if (!solverData || !graph) {
             return {success: false, fault: "graph", message: "Invalid solver or graph"};
         }
@@ -47,7 +48,7 @@ export default function GraphSearchPage() {
     };
 
     function runAlgo() {
-        let result = updateSolutionSteps(solutionData, graph);
+        let result = updateSolutionSteps(solutionData, ctx);
         if (result.success) {
             toast.success(result.message);
             setGraphErrorMessage("");
@@ -68,7 +69,7 @@ export default function GraphSearchPage() {
     const onGraphDataChanged = useCallback((rawData: string) => {
         setGraphData(rawData);
         try {
-            setGraph(Graph.fromNotation(rawData));
+            setCtx(new GraphContext(Graph.fromNotation(rawData)));
             setGraphErrorMessage("");
         }
         catch (err) {
@@ -85,6 +86,7 @@ export default function GraphSearchPage() {
     
     // Execute the step at StepIndex
     const handleStep = useCallback((steps: GraphSearchResult[], stepIndex: number) => {
+        const graph = ctx.graph;
         if (!graph) {
             throw new Error("Graph cannot be null at step handling.");
         }
@@ -92,34 +94,16 @@ export default function GraphSearchPage() {
             return steps.length;
         }
         let step = steps[stepIndex];
-        switch (step.actType) {
-            case "visit":
-                graph.visitNode(step.cell!);
-                break;
-            case "expand":
-                graph.expandNode(step.cell!);
-                break;
-            case "success":
-                graph.complete();
-                break;
-            case "failure":
-                graph.fail();
-                break;
-            case "none":
-                break;
-            default:
-                console.error("Unknown step type: ", step.actType);
-                break;
-        }
         if (step.command) {
-            step.command.execute(graph);
+            step.command.execute(ctx);
         }
         setDebugData(step.debugValue);
         setGraphStepIndex(stepIndex + 1);
         return stepIndex + 1;
-    },[graph]);
+    },[ctx]);
     // Undo the step at StepIndex - 1
     const handleBackStep = useCallback((steps: GraphSearchResult[], stepIndex: number) => { 
+        const graph = ctx.graph;
         if (!graph) {
             throw new Error("Graph cannot be null at step handling.");
         }
@@ -127,34 +111,21 @@ export default function GraphSearchPage() {
             return 0;
         }
         let step = steps[stepIndex - 1];
-        switch (step.actType) {
-            case "visit":
-                graph.unvisitNode(step.cell!);
-                break;
-            case "expand":
-                graph.unexpandNode(step.cell!);
-                break;
-            case "success":
-                graph.uncomplete();
-                break;
-            case "failure":
-                graph.unfail();
-                break;
-            case "none":
-                break;
-            default:
-                console.error("Unknown step type: ", step.actType);
-                break;
-        }
         if (step.command) {
-            step.command.revert(graph);
+            step.command.revert(ctx);
         }
         setDebugData(stepIndex >= 2 ? steps[stepIndex - 2].debugValue : null);
         setGraphStepIndex(stepIndex - 1);
         return stepIndex - 1;
-    },[graph]);
+    },[ctx]);
+
+    useEffect(() => {
+        if (ctx.graph)
+            setGraphData(ctx.graph?.stringify());
+    }, [ctx.graph])
     
     const onStepRequested = useCallback((newStep: number) => {
+        const graph = ctx.graph;
         if (!graph || !graph.startNode || !graph.endNode) {
             toast.error("Invalid graph. Please make sure the graph is valid.");
             return;
@@ -174,26 +145,39 @@ export default function GraphSearchPage() {
             stepIndex = handleBackStep(steps, stepIndex);
             if (maxCnt-- < 0) break;
         }
-    },[graph, graphStepIndex, graphSteps, handleBackStep, handleStep]);
+    },[ctx, graphStepIndex, graphSteps, handleBackStep, handleStep]);
     
-    const handleGraphBackwardsData = useCallback((graph: Graph) => {
-        setGraph(graph);
-        setGraphData(graph.stringify());
-    },[]);
-
-    function resetStepData() {
+    const resetStepData = useCallback(() => {
         setGraphStepIndex(0);
         setDebugData(null);
-        if (graph)
-            graph.resetStepData();
-    }
+        while (ctx.length > 1) {
+            ctx.pop();
+        }
+        ctx.graph?.resetStepData();
+    }, [ctx])
+
+    const handleGraphBackwardsData = useCallback((graph: Graph, visual: boolean) => {
+        if (!visual) {
+            setGraphSteps([]);
+            setGraphStepIndex(0);
+            setDebugData(null);
+            setCtx(new GraphContext(graph));
+        } else {
+            setCtx((v) => {
+                v.update(graph);
+                return v;
+            });            
+        }
+        setCtx(new GraphContext(graph));
+        setGraphData(graph.stringify());
+    }, []);
 
     // command execution
-    let executed = graph?.commandHandler.executeToCurrent(graph);
+    let executed = ctx.commandHandler.executeToCurrent(ctx);
     if (executed && executed.length > 0) {
         for (let cmd of executed) console.log(`Executed command: ${cmd.name}`);
         // Backwards update from commands!
-        setGraphData(graph!.stringify());
+        setGraphData(ctx.graph!.stringify());
     }
 
     return (
@@ -211,7 +195,7 @@ export default function GraphSearchPage() {
                     setLeftWidth(leftWidth + v);
                 })}></VDivider>
                 <div className="p-3 m-2 flex-grow">
-                    <GraphView graph={graph} stepHandler={onStepRequested} onGraphChanged={handleGraphBackwardsData}
+                    <GraphView graph={ctx.graph} stepHandler={onStepRequested} onGraphChanged={handleGraphBackwardsData}
                     totalSteps={graphSteps.length} logData={debugData} stepIndex={graphStepIndex}></GraphView>
                 </div>
             </div>

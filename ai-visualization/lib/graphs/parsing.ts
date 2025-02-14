@@ -1,6 +1,7 @@
-import { NotImplementedError, ParsingError } from "../errors/error";
+import { ParsingError } from "../errors/error";
 import { mergeInPlace } from "../utils/objects";
-import { GenericGraph, Graph, GraphEdge, GraphEdgeSimple, GraphEdgeStyle, GraphNode, GraphNodeStyle, GridGraph, defaultDiagWeightNames } from "./graph";
+import { GraphEdge, GraphEdgeSimple, GraphEdgeStyle, GraphNode, GraphNodeStyle } from "./components";
+import { DIAG_WEIGHT_TERMS, GenericGraph, Graph, GridGraph } from "./graph";
 
 function removeQuotes(s: string): string {
     if (s.startsWith("\"")) return s.substring(1, s.length - 1);
@@ -204,8 +205,8 @@ export function gridGraphFromNotation(lines: string[]): GridGraph {
                     result.updateAllTraversableEdges();
                     break;
                 }
-                if (!(diagMode in defaultDiagWeightNames)) throw new ParsingError(`Invalid diagonal weight mode, expected one of ${Object.keys(defaultDiagWeightNames).join(", ")} or a number, got ${diagMode}`, i, cmd.length + 1);
-                result.diagonalWeights = defaultDiagWeightNames[diagMode];
+                if (!(diagMode in DIAG_WEIGHT_TERMS)) throw new ParsingError(`Invalid diagonal weight mode, expected one of ${Object.keys(DIAG_WEIGHT_TERMS).join(", ")} or a number, got ${diagMode}`, i, cmd.length + 1);
+                result.diagonalWeights = DIAG_WEIGHT_TERMS[diagMode];
                 result.updateAllTraversableEdges();
                 break;
             case "EDGE":
@@ -290,7 +291,7 @@ export function notationFromGridGraph(graph: GridGraph): string {
 }
 
 export function getDiagonalWeightName(weight: number): string {
-    for (let [name, value] of Object.entries(defaultDiagWeightNames)) {
+    for (let [name, value] of Object.entries(DIAG_WEIGHT_TERMS)) {
         if (value === weight) return name;
     }
     return weight.toString();
@@ -336,4 +337,20 @@ export function notationFromGenericGraph(graph: GenericGraph): string {
     if (graph.startNode) lines.push(`START ${graph.startNode.id}`);
     if (graph.endNode) lines.push(`GOAL ${graph.endNode.id}`);
     return lines.join("\n");
+}
+
+export type RawGraph = {
+
+}
+
+type RawNode = {
+
+}
+
+type RawEdge = {
+
+}
+
+export function graphFromRaw(graph: RawGraph): Graph {
+    return new GenericGraph();
 }

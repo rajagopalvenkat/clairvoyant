@@ -1,4 +1,4 @@
-import { Graph, GridGraph, GenericGraph, GraphNode, EditableGraphComponent, GraphEdge, GraphEdgeSimple } from "@/lib/graphs/graph"
+import { Graph, GridGraph, GenericGraph, EditableGraphComponent, } from "@/lib/graphs/graph"
 import { renderValue } from "@/lib/strings/pretty"
 import { useCallback, useEffect, useState } from "react";
 import VisGraph, { GraphData, Options as VisGraphOptions } from "react-vis-graph-wrapper"
@@ -6,7 +6,7 @@ import Stepper from "./stepper";
 import { Font, NodeOptions } from "vis-network";
 import * as vis from 'vis-network'
 import { colorWithAlpha } from "@/lib/utils/colors";
-import { buttonStyleClassNames, dangerButtonStyleClassNames, getButtonStyleClassNamesForColor } from "@/lib/statics/styleConstants";
+import { dangerButtonStyleClassNames, getButtonStyleClassNamesForColor } from "@/lib/statics/styleConstants";
 import { PropertyInspector } from "@/app/components/editors/propertyEditor";
 import { ensureError } from "@/lib/errors/error";
 import { toast } from "react-toastify";
@@ -16,6 +16,7 @@ import { ItemProperty } from "@/lib/utils/properties";
 import { GraphEvents } from '../../../../lib/graphs/vis-events';
 
 import "./graphView.css"
+import { GraphEdge, GraphEdgeSimple, GraphNode } from "@/lib/graphs/components";
 
 const minEdgeWidth = 1.5;
 const maxEdgeWidth = 15;
@@ -202,7 +203,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
     logData: any,
     stepIndex: number,
     totalSteps: number,
-    onGraphChanged: (graph: Graph) => void,
+    onGraphChanged: (graph: Graph, visual: boolean) => void,
     stepHandler: (step: number) => void,
 }) {
     const stringifySteps = () => {
@@ -236,8 +237,8 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
         renderGraph();
     }, [renderGraph, stepIndex])
 
-    const graphChangedCallback = useCallback((g: Graph) => {
-        onGraphChanged(g);
+    const graphChangedCallback = useCallback((graph: Graph, visual: boolean) => {
+        onGraphChanged(graph, visual);
         renderGraph();
     }, [onGraphChanged, renderGraph])
     const handleStepCallback = useCallback((step: number) => {
@@ -262,7 +263,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
         }
         let newNode = new GraphNode(graph, newData.id, options.x ?? 0, options.y ?? 0);
         graph.addNode(newNode);
-        graphChangedCallback(graph);
+        graphChangedCallback(graph, false);
     }, [graph, graphChangedCallback])
 
     //console.log(visGraphData);
@@ -284,7 +285,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                     if (node) {
                         node.setProp("traversable", !node.traversable);
                     }
-                    graphChangedCallback(graph);
+                    graphChangedCallback(graph, false);
                 }
             } else if (selectedNodes.length === 0 && edges.length > 0) {
                 for (let edgeId of edges) {
@@ -292,7 +293,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                     if (edge) {
                         edge.setProp("forbidden", !edge.getProp("forbidden"));
                     }
-                    graphChangedCallback(graph);
+                    graphChangedCallback(graph, false);
                 }
             } else {
                 // double click on empty space
@@ -307,45 +308,47 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
             //toast.info("Hold event triggered for node " + event.nodes[0] + " and edge " + event.edges[0]);
             if (event.nodes.length > 0) { graph.context.heldNode = graph.getNodeById(event.nodes[0] as string)}
             else if (event.edges.length > 0) { graph.context.heldEdge = graph.getEdgeById(event.edges[0] as number)}
-            graphChangedCallback(graph);
+            graphChangedCallback(graph, true);
         },
         hoverEdge(event) {
             if (!graph) return;
             graph.context.hoveredEdge = graph.getEdgeById(event.edge as number);
-            graphChangedCallback(graph);
+            graphChangedCallback(graph, true);
         },
         hoverNode(event) {
             if (!graph) return;
             graph.context.hoveredNode = graph.getNodeById(event.node as string);
-            graphChangedCallback(graph);
+            graphChangedCallback(graph, true);
         },
         blurEdge(event) {
             if (!graph) return;
             graph.context.hoveredEdge = undefined;
-            graphChangedCallback(graph);
+            graphChangedCallback(graph, true);
         },
         blurNode(event) {
             if (!graph) return;
             graph.context.hoveredNode = undefined;
-            graphChangedCallback(graph);
+            graphChangedCallback(graph, true);
         },
         dragStart: (event) => {
             if (!graph) return;
             if (graph instanceof GridGraph) return; // No edge creation for grid graphs
             graph.context.draggingNode = event.nodes.length === 0 ? undefined : graph.getNodeById(event.nodes[0] as string);
-            graphChangedCallback(graph);
+            graphChangedCallback(graph, true);
         },
         release: (event) => {
             if (!graph) return;
+            let visual = true;
             // No edge creation for grid graphs
             if (!(graph instanceof GridGraph) && graph.context.heldNode && graph.context.hoveredNode) {
                 let edge = new GraphEdgeSimple(graph.getNextEdgeIdentifier(), graph.context.heldNode, graph.context.hoveredNode, graph.getProp("default_bidirectional"));
                 graph.addEdge(edge);
+                visual = false;
             }
             graph.context.draggingNode = undefined;
             graph.context.heldEdge = undefined;
             graph.context.heldNode = undefined;
-            graphChangedCallback(graph);
+            graphChangedCallback(graph, visual);
         }
     }
 
@@ -369,7 +372,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                 <PropertyInspector properties={graph?.properties ?? []} onChange={(propertyName: string, oldValue: any, newValue: any) => {
                     try {
                         graph?.setProp(propertyName, newValue);
-                        graphChangedCallback(graph!);
+                        graphChangedCallback(graph!, false);
                     } catch (e) {
                         let err = ensureError(e);
                         toast.error(err.message);
@@ -386,7 +389,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                     for (let component of selectedComponents) {
                         component.setProp(property, newValue);
                     }
-                    graphChangedCallback(graph!);
+                    graphChangedCallback(graph!, false);
                 }} onDeletionRequested={async () => {
                     let confirm = await showConfirmation(`Are you sure you want to delete the selected components (${selectedComponents.map(c => c.id).join(", ")})?`)
                     if (!confirm) return;
@@ -395,7 +398,7 @@ export default function GraphView({graph, logData, stepIndex, totalSteps, onGrap
                         component.delete();
                     }
                     setSelectedComponents([]);
-                    graphChangedCallback(graph!);
+                    graphChangedCallback(graph!, false);
                 }} />
             </div>
         </div>

@@ -1,13 +1,14 @@
-import { NotImplementedError, ParsingError, RuntimeError } from "../errors/error";
-import { Command, CommandHandler } from "../utils/commands";
+import { ParsingError, RuntimeError } from "../errors/error";
+import { CommandHandler } from "../utils/commands";
 import { EditableComponent, ItemProperty, canSetProps } from "../utils/properties";
-import { Mathlib } from "../utils/math";
+import { genericGraphFromNotation, graphFromRaw, gridGraphFromNotation, notationFromGenericGraph, notationFromGridGraph, preprocessGraphNotation, RawGraph } from "./parsing";
+import { GraphEdge, GraphEdgeSimple, GraphNode } from "./components";
 
 export const DIAGONAL_WEIGHT_DISABLED = -1;
 export const DIAGONAL_WEIGHT_CHEBYSHEV = 1;
 export const DIAGONAL_WEIGHT_EUCLIDEAN = 1.4142135623730951;
 export const DIAGONAL_WEIGHT_MANHATTAN = 2;
-export const defaultDiagWeightNames: Record<string, number> = {
+export const DIAG_WEIGHT_TERMS: Record<string, number> = {
     "disabled": DIAGONAL_WEIGHT_DISABLED,
     "manhattan": DIAGONAL_WEIGHT_MANHATTAN,
     "euclidean": DIAGONAL_WEIGHT_EUCLIDEAN,
@@ -21,14 +22,50 @@ export const ADJACENT_DELTAS: [number, number][] = [
     [0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]
 ];
 
-import { genericGraphFromNotation, gridGraphFromNotation, notationFromGenericGraph, notationFromGridGraph, preprocessGraphNotation } from "./parsing";
-
 export interface GraphUIContext {
     heldNode?: GraphNode;
     heldEdge?: GraphEdge;
     hoveredNode?: GraphNode;
     hoveredEdge?: GraphEdge;
     draggingNode?: GraphNode;
+}
+
+export class GraphContext {
+    private _graphs: Graph[] = [];
+    private _graph: Graph | null = null;
+    private _commandHandler: CommandHandler<GraphContext> = new CommandHandler<GraphContext>();
+
+    constructor(graph: Graph | null) {
+        if (graph) this.push(graph);
+    }
+
+    get length() {
+        return this._graphs.length;
+    }
+
+    get graph() {
+        return this._graph;
+    }
+
+    get commandHandler() {
+        return this._commandHandler;
+    }
+
+    public push(graph: Graph) {
+        this._graphs.push(graph);
+        this._graph = graph;
+    }
+    public pop(): Graph | undefined {
+        const result = this._graphs.pop();
+        this._graph = this._graphs.length === 0 ?
+            null : this._graphs[this._graphs.length - 1];
+        return result;
+    }
+    public update(graph: Graph) {
+        if (this._graphs.length === 0) this.push(graph);
+        this._graphs[this._graphs.length - 1] = graph;
+        this._graph = graph;
+    }
 }
 
 export abstract class Graph implements EditableComponent {
@@ -39,7 +76,6 @@ export abstract class Graph implements EditableComponent {
     protected isDirtyRender: boolean = false;
     protected _startNode: GraphNode | null = null;
     protected _endNode: GraphNode | null = null;
-    protected _commandHandler: CommandHandler<Graph> = new CommandHandler<Graph>();
     protected _searchResult: string = "";
     public defaultBidirectional: boolean = false;
     public physicsEnabled: boolean = true;
@@ -140,21 +176,6 @@ export abstract class Graph implements EditableComponent {
     get endNode() {return this._endNode}
     set endNode(node) {this._endNode = node; this.markDirtyRender();}
 
-    // Command handling
-    get commandHandler() {return this._commandHandler;}
-    
-    visitNode(node: GraphNode) {
-        this.setNodeState(node, "visited");
-    }
-    unvisitNode(node: GraphNode) {
-        this.setNodeState(node, "");
-    }
-    expandNode(node: GraphNode) {
-        this.setNodeState(node, "expanded");
-    }
-    unexpandNode(node: GraphNode) {
-        this.setNodeState(node, "visited");
-    }
     complete() {
         this._searchResult = "success"
     }
@@ -232,7 +253,6 @@ export abstract class Graph implements EditableComponent {
         this.ensureLookupClean();
         let edges = this._edgeLookup.get(sourceNode.id);
         if (!edges) return;
-        let result: GraphEdge[] = [];
         for (let edge of edges) {
             if (edge.target.id === targetNode.id && (edge.traversable() || includeUntraversable)) yield edge;
         }
@@ -247,11 +267,7 @@ export abstract class Graph implements EditableComponent {
     }
 
     public getAllNodes(): GraphNode[] {
-        let nodes: GraphNode[] = []
-        for (let node of this._nodeLookup.values()) {
-            nodes.push(node);
-        }
-        return nodes;
+        return [...this._nodeLookup.values()];
     }
 
     // Useful functions for algorithms
@@ -317,6 +333,10 @@ export abstract class Graph implements EditableComponent {
         } else {
             throw new ParsingError(`Unable to find graph type "${firstLine}", currently supported graph types are ${GRAPH_TYPE_NAMES.join(", ")}`, 0, 0);
         }
+    }
+
+    public static fromRaw(rawGraph: RawGraph): Graph {
+        return graphFromRaw(rawGraph);
     }
 
     abstract stringify(): string;
@@ -467,330 +487,6 @@ export class GenericGraph extends Graph {
     }
 }
 
-function getEdgeProperties(edge: GraphEdge): ItemProperty[] {
-    return [
-        {name: "id", type: "number", value: edge.id, fixed: true},
-        {name: "source", type: "string", value: edge.source.id, fixed: true},
-        {name: "target", type: "string", value: edge.target.id, fixed: true},
-        {name: "weight", type: "number", value: edge.weight},
-        {name: "bidirectional", type: "boolean", value: edge.isBidirectional},
-        {name: "flipped", type: "boolean", value: edge.data["flipped"] ?? false},
-        {name: "highlighted", type: "boolean", value: edge.data["highlighted"] ?? false, hidden: false},
-        {name: "forbidden", type: "boolean", value: edge.data["forbidden"] ?? false, hidden: false}
-    ]
-}
-function setEdgeProperty(edge: GraphEdge, name: string, value: any): boolean {
-    let setAnalysis = canSetProps(getEdgeProperties(edge), {[name]: value});
-    if (!setAnalysis.success) throw new Error(setAnalysis.errors.join("\n"));
-    if (name === "weight") {
-        edge.weight = value;
-    } else if (name === "bidirectional") {
-        edge.isBidirectional = value;
-    } else if (name === "flipped") {
-        edge.data["flipped"] = value;
-    } else if (name === "highlighted") {
-        edge.data["highlighted"] = value;
-    } else if (name === "forbidden") {
-        edge.data["forbidden"] = value;
-    } else {
-        return false;
-    }
-    return true;
-}
-function getEdgeProperty(edge: GraphEdge, name: string) {
-    if (name === "id") {
-        return edge.id;
-    } else if (name === "source") {
-        return edge.source.id;
-    } else if (name === "target") {
-        return edge.target.id;
-    } else if (name === "weight") {
-        return edge.weight;
-    } else if (name === "bidirectional") {
-        return edge.isBidirectional;
-    } else if (name === "flipped") {
-        return edge.data["flipped"];
-    } else if (name === "highlighted") {
-        return edge.data["highlighted"] ?? false;
-    } else if (name === "forbidden") {
-        return edge.data["forbidden"] ?? false;
-    }
-    throw new Error(`Property ${name} is not implemented for GraphEdge`);
-}
-
-class ReverseGraphEdgeRef implements GraphEdge {
-    protected ref: GraphEdgeSimple;
-    constructor(reference: GraphEdgeSimple) {
-        this.ref = reference;
-    }
-    get id() {return -this.ref.id;}
-    
-    get source() {return this.ref.target;}
-    set source(node: GraphNode) {this.ref.target = node;}
-    get target() {return this.ref.source;}
-    set target(node: GraphNode) {this.ref.source = node;}
-    get isBidirectional() {return this.ref.isBidirectional;}
-    set isBidirectional(bidirectional: boolean) {this.ref.isBidirectional = bidirectional;}
-    get data() {return this.ref.data}
-    set data(d) {this.ref.data = d}
-    get style() {return this.ref.style}
-    set style(s) {this.ref.style = s}
-    get weight() {return this.ref.weight}
-    set weight(w) {this.ref.weight = w}
-    get isRef() {return true;}
-    reverse() {
-        return this.ref;
-    }
-    traversable() {
-        if (!this.source.traversable || !this.target.traversable || this.data["forbidden"]) return false;
-        return this.ref.isBidirectional || this.ref.data["flipped"];
-    }
-    getId(): string {
-        return `${this.ref.source.id}_${this.ref.target.id}`;
-    }
-
-    get properties(): ItemProperty[] {
-        return getEdgeProperties(this);
-    }
-    getProp(name: string) {
-        return getEdgeProperty(this, name);
-    }
-    setProp(name: string, value: any): boolean {
-        return setEdgeProperty(this, name, value);
-    }
-    delete(): void {
-        this.source.graph.removeEdge(this);
-    }
-}
-
-export class GraphEdgeSimple implements GraphEdge {
-    protected _id: number;
-    protected _source: GraphNode;
-    protected _target: GraphNode;
-    protected _isBidirectional: boolean;
-    protected _data: Record<string, any>;
-    protected _style: GraphEdgeStyle;
-    private _reverse: ReverseGraphEdgeRef;
-
-    get id() {return this._id;}
-
-    constructor(id: number, source: GraphNode, target: GraphNode, isBidirectional: boolean = false, data: Record<string, any> = {}) {
-        if (id <= 0) {throw new Error("Non-positive IDs are reserved for reverse edge references.");}
-        this._id = id;
-        this._source = source;
-        this._target = target;
-        this._isBidirectional = isBidirectional;
-        this._data = data;
-        this._style = {};
-        this._reverse = new ReverseGraphEdgeRef(this);
-    }
-    get properties(): ItemProperty[] {
-        return getEdgeProperties(this);
-    }
-    getProp(name: string) {
-        return getEdgeProperty(this, name);
-    }
-    setProp(name: string, value: any): boolean {
-        return setEdgeProperty(this, name, value);
-    }
-    delete(): void {
-        this.source.graph.removeEdge(this);
-    }
-    
-    get source() {return this._source;}
-    set source(node: GraphNode) {
-        this._source = node;
-        node.graph.markDirtyAll();
-    }
-    get target() {return this._target;}
-    set target(node: GraphNode) {
-        this._target = node;
-        node.graph.markDirtyAll();
-    }
-    get isBidirectional() {return this._isBidirectional;}
-    set isBidirectional(bidirectional: boolean) {
-        this._isBidirectional = bidirectional;
-        this._source.graph.markDirtyRender();
-    }
-
-    get data() {return this._data}
-    set data(d) {this._data = d}
-    get style() {return this._style}
-    set style(s) {this._style = s}
-
-    get weight() {
-        if ("w" in this._data) {return (this._data["w"] as number) || 1}
-        return 1;
-    }
-    set weight(w) {this._data["w"] = w}
-
-    get isRef() {return false;}
-
-    reverse(): GraphEdge {
-        return this._reverse;
-    }
-
-    traversable(): boolean {
-        if (!this.source.traversable || !this.target.traversable || this.data["forbidden"]) return false;
-        return this.isBidirectional || !this.data["flipped"];
-    }
-
-    getId(): string {
-        return `${this.source.id}_${this.target.id}`;
-    }
-}
-
-export interface GraphEdge extends EditableGraphComponent {
-    getId(): string;
-    get source(): GraphNode
-    set source(node: GraphNode)
-    get target(): GraphNode
-    set target(node: GraphNode)
-    get isBidirectional(): boolean
-    set isBidirectional(bidirectional: boolean)
-    get weight(): number
-    set weight(w: number)
-    get data(): Record<string, any>
-    set data(data: Record<string, any>)
-    get style(): GraphEdgeStyle
-    set style(style: GraphEdgeStyle)
-
-    get isRef(): boolean
-
-    reverse(): GraphEdge
-    traversable(): boolean
-}
-
 export interface EditableGraphComponent extends EditableComponent {
     delete(): void;
-}
-
-export class GraphNode implements EditableGraphComponent {
-    id: string;
-    x: number;
-    y: number;
-    private _graph: Graph;
-    data: Record<string, any>;
-    style: GraphNodeStyle = {};
-
-    constructor(graph: Graph, id: string, x: number = 0, y: number = 0, data: Record<string, any> = {}) {
-        this._graph = graph;
-        this.id = id;
-        this.x = x;
-        this.y = y;
-        this.data = data;
-    }
-
-    get properties(): ItemProperty[] {
-        let result: ItemProperty[] = [
-            {name: "id", type: "string", value: this.id, fixed: true},
-            {name: "label", type: "string", value: this.data["label"] ?? this.id},
-            {name: "is_start", type: "boolean", value: this._graph.startNode?.id === this.id, trigger: true},
-            {name: "is_goal", type: "boolean", value: this._graph.endNode?.id === this.id, trigger: true},
-            {name: "h", type: "number", value: this.heuristic},
-            {name: "traversable", type: "boolean", value: this.traversable},
-            {name: "highlighted", type: "boolean", value: this.data["highlighted"] ?? false, hidden: false}
-        ];
-        if (this._graph instanceof GridGraph) {
-            result.push({name: "x", type: "number", value: this.x, fixed: true});
-            result.push({name: "y", type: "number", value: this.y, fixed: true});
-        }
-        return result;
-    }
-    getProp(name: string) {
-        if (name === "id") return this.id;
-        if (name === "is_start") return this._graph.startNode?.id === this.id;
-        if (name === "is_goal") return this._graph.endNode?.id === this.id;
-        if (name === "label") return this.data["label"] ?? this.id;
-        if (name === "h") return this.heuristic;
-        if (name === "traversable") return this.traversable;
-        if (name === "highlighted") return this.data["highlighted"] ?? false;
-        if (this._graph instanceof GridGraph) {
-            if (name === "x") return this.x;
-            if (name === "y") return this.y;
-        }
-        throw new NotImplementedError(`Property ${name} is not implemented for GraphNode`);
-    }
-    setProp(name: string, value: any): boolean {
-        let setAnalysis = canSetProps(this.properties, {[name]: value});
-        if (!setAnalysis.success) throw new Error(setAnalysis.errors.join("\n"));
-        
-        if (name === "label") {
-            this.data["label"] = value;
-        } else if (name === "is_start") {
-            // Initial checks ensure that this is set to true
-            this._graph.startNode = this;
-        } else if (name === "is_goal") {
-            // Initial checks ensure that this is set to true
-            this._graph.endNode = this;
-        } else if (name === "h") {
-            this.data["h"] = value;
-        } else if (name === "traversable") {
-            this.data["traversable"] = value;
-        } else if (name === "highlighted") {
-            this.data["highlighted"] = value;
-        } else {
-            return false;
-        }
-        return true;
-    }
-
-    delete(): void {
-        if (this._graph instanceof GridGraph) { 
-            throw new Error("Grid Graph nodes may not be deleted, modify the grid size instead.");
-        }
-        if (this._graph.endNode?.id === this.id) {
-            throw new Error("Cannot delete the goal node of the graph. Set another node as the goal first.");
-        }
-        if (this._graph.startNode?.id ===   this.id) {
-            throw new Error("Cannot delete the start node of the graph. Set another node as the start first.");
-        }
-        this._graph.removeNode(this);
-    }
-
-    get graph() {return this._graph;}
-    get heuristic() {
-        if (this.data["h"] != undefined) return this.data["h"];
-        if (this._graph instanceof GridGraph) {
-            let goal = this._graph.endNode;
-            if (!goal) return 0;
-            let dx = Math.abs(this.x - goal.x);
-            let dy = Math.abs(this.y - goal.y);
-            let diagWeights = (this._graph as GridGraph).diagonalWeights;
-            let effectiveDiagonalCost = diagWeights  >= 0 ? diagWeights : Number.POSITIVE_INFINITY;
-            return Mathlib.distanceWithDiagonalCost([dx, dy], effectiveDiagonalCost);
-        }
-        return 0;
-    }
-    get traversable() {
-        if (this.data["traversable"] === false) return false;
-        return true; 
-    }
-
-    getSerializableData(): Record<string, any> {
-        let innerData: Record<string, any> = {};
-        if (this.style && Object.keys(this.style).length > 0)
-            innerData.style = this.style;
-        if (this.graph instanceof GenericGraph) {
-            if (!this.traversable) innerData.traversable = false;
-        }
-        for (let key of ["label", "h"]) {
-            if (this.data[key] !== undefined) {
-                innerData[key] = this.data[key];
-            }
-        }
-        return innerData;
-    }
-}
-
-export interface GraphNodeStyle {
-    color?: string;
-    borderColor?: string;
-    borderThickness?: number;
-    size?: number;
-}
-
-export interface GraphEdgeStyle {
-    color?: string;
-    thickness?: number;
 }

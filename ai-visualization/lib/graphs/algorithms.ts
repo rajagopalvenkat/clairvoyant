@@ -1,4 +1,5 @@
-import { Graph, GraphNode } from "./graph";
+import { GraphNode } from "./components/node";
+import { Graph } from "./graph";
 
 export function dijsktra(graph: Graph, start: GraphNode, useWeights: boolean = true): Map<string, number> {
     let distanceFromStart = new Map<string, number>();
