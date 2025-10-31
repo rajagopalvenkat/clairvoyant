@@ -1,1 +1,0 @@
-# This is just a temporary file to get the lib folder to be committed correctly

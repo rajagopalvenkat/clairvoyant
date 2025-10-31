@@ -1,27 +1,30 @@
+import { Graph } from "../graphs/graph";
 import { EditableComponent, ItemPropertyChange, executePropertyChange, revertPropertyChange } from "./properties";
 
-export class Command<T> {
+export class Command<T, R = void> {
     name: string;
     done: boolean;
-    cmd_do: (obj: T) => void;
-    cmd_undo: (obj: T) => void;
+    cmd_do: (obj: T) => R;
+    cmd_undo: (obj: T) => R;
 
-    constructor(name: string, cmd_do: (obj: T) => void, cmd_undo: (obj: T) => void) {
+    constructor(name: string, cmd_do: (obj: T) => R, cmd_undo: (obj: T) => R) {
         this.name = name;
         this.done = false;
         this.cmd_do = cmd_do;
         this.cmd_undo = cmd_undo;
     }
 
-    execute(obj: T) {
+    execute(obj: T): R {
         if (this.done) throw new Error(`Command ${this.name} already executed, cannot be re-executed.`);
-        this.cmd_do(obj);
+        const ret = this.cmd_do(obj);
         this.done = true;
+        return ret;
     }
-    revert(obj: T) {
+    revert(obj: T): R {
         if (!this.done) throw new Error(`Command ${this.name} not yet executed, cannot be reverted.`);
-        this.cmd_undo(obj);
+        const ret = this.cmd_undo(obj);
         this.done = false;
+        return ret;
     }
 }
 
@@ -81,7 +84,7 @@ export class CommandHandler<T> {
     }
 }
 
-export class PropertyChangeCommand extends Command<any> {
+export class PropertyChangeCommand<T> extends Command<T> {
     changes: ItemPropertyChange<EditableComponent>[];
     constructor(changes: ItemPropertyChange<EditableComponent>[]) {
         super("Change Property", (_) => {
